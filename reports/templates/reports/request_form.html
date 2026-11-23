@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}طلب إجراء جديد{% endblock %}
+{% block content %}
+<form method="post" novalidate>{% csrf_token %}
+<div class="card">
+  <div class="form-head">
+    <div class="muted">إدارة الشؤون الفنية — فريق الرصد والمتابعة الإلكترونية</div>
+    <h1>نموذج طلب إجراء (حجب - قفل - حظر - توثيق) للصفحات والقنوات الرسمية</h1>
+  </div>
+  {{ form.non_field_errors }}
+
+  <h2>{{ form.platforms.label }} <span class="muted">(ضع علامة صح أمام المنصة المطلوبة)</span></h2>
+  <div class="field">{{ form.platforms }}{{ form.platforms.errors }}</div>
+
+  <h2>{{ form.actions.label }} <span class="muted">(ضع علامة صح أمام الإجراء المراد)</span></h2>
+  <div class="field">{{ form.actions }}{{ form.actions.errors }}</div>
+
+  <h2>{{ form.links.label }}</h2>
+  <div class="field">{{ form.links }}<div class="muted">{{ form.links.help_text }}</div>{{ form.links.errors }}</div>
+
+  <h2>{{ form.description.label }}</h2>
+  <div class="field">{{ form.description }}{{ form.description.errors }}</div>
+
+  <h2>خامساً: المخولون بالعمليات</h2>
+  <div class="grid3">
+    <div>{% include "reports/_field.html" with f=form.monitor %}<div class="muted">مسؤول عن الرصد والمتابعة الإلكترونية</div></div>
+    <div>{% include "reports/_field.html" with f=form.uploader %}<div class="muted">مسؤول عن رفع الأدلة والبيانات</div></div>
+    <div>{% include "reports/_field.html" with f=form.platform_contact %}<div class="muted">الكود الثابت لنقطة الاتصال الخارجية</div></div>
+  </div>
+  <datalist id="user-codes">
+    {% for u in users %}<option value="{{ u.username }}">{{ u.full_name }} — {{ u.get_role_display }}</option>{% endfor %}
+  </datalist>
+
+  <h2 style="margin-top:14px">سادساً: التوقيع والاعتماد الرسمي</h2>
+  <div class="field"><label style="font-weight:400">{{ form.declaration_accepted }} {{ form.declaration_accepted.label }}</label>{{ form.declaration_accepted.errors }}</div>
+  <div class="field"><label style="font-weight:400">{{ form.consent_accepted }} {{ form.consent_accepted.label }}</label>{{ form.consent_accepted.errors }}</div>
+  <p class="muted">يُعتمد الطلب لاحقاً من المسؤول المعتمد (مكتب الأدلة الرقمية)، ويُسجَّل التوقيع والتاريخ تلقائياً.</p>
+
+  <button class="btn">إرسال الطلب</button>
+</div>
+</form>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}طلبات الإجراء{% endblock %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+    <h1>طلبات الإجراء</h1>
+    <a class="btn" href="{% url 'reports:create' %}">+ طلب جديد</a>
+  </div>
+  <form method="get" style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap">
+    <input type="text" name="q" value="{{ request.GET.q }}" placeholder="بحث في الروابط / الشرح / الكود" style="flex:1;min-width:200px">
+    <select name="status" style="width:auto">
+      <option value="">كل الحالات</option>
+      {% for v, l in statuses %}<option value="{{ v }}" {% if request.GET.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select>
+    <button class="btn secondary">تصفية</button>
+  </form>
+  <div style="overflow-x:auto">
+  <table>
+    <tr><th>#</th><th>المنصات</th><th>الإجراء</th><th>الروابط</th><th>مسؤول الرصد</th><th>الحالة</th><th>التاريخ</th></tr>
+    {% for r in object_list %}
+    <tr>
+      <td><a href="{{ r.get_absolute_url }}">{{ r.pk }}</a></td>
+      <td>{{ r.platform_labels|join:"، " }}</td>
+      <td>{{ r.action_labels|join:"، " }}</td>
+      <td>{{ r.link_count }} {% if r.video_count %}<span class="muted">({{ r.video_count }} فيديو)</span>{% endif %}</td>
+      <td class="ltr">{{ r.monitor.username }}</td>
+      <td><span class="badge b-{{ r.status }}">{{ r.get_status_display }}</span></td>
+      <td>{{ r.created_at|date:"Y/m/d H:i" }}</td>
+    </tr>
+    {% empty %}<tr><td colspan="7" class="muted">لا توجد طلبات.</td></tr>{% endfor %}
+  </table>
+  </div>
+  {% if is_paginated %}<p>
+    {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q|urlencode }}&status={{ request.GET.status }}">السابق</a>{% endif %}
+    صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+    {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q|urlencode }}&status={{ request.GET.status }}">التالي</a>{% endif %}
+  </p>{% endif %}
+</div>
+{% endblock %}

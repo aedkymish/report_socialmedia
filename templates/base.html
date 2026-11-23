@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}الرصد والمتابعة الإلكترونية{% endblock %}</title>
+<style>
+  :root { --bg:#f4f6f8; --card:#fff; --ink:#1d2733; --muted:#64707d; --line:#d9dee4;
+          --brand:#0f4c5c; --ok:#1e7d4f; --warn:#b26b00; --bad:#b3261e; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Segoe UI",Tahoma,"Noto Naskh Arabic",Arial,sans-serif;
+         background:var(--bg); color:var(--ink); line-height:1.7; }
+  header.top { background:var(--brand); color:#fff; padding:10px 16px; display:flex;
+               align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+  header.top a { color:#fff; text-decoration:none; margin-inline-start:14px; }
+  header.top .brand { font-weight:700; }
+  main { max-width:1000px; margin:20px auto; padding:0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px; margin-bottom:16px; }
+  h1 { font-size:1.35rem; margin:0 0 4px; } h2 { font-size:1.05rem; margin:0 0 10px; color:var(--brand); }
+  .muted { color:var(--muted); font-size:.9rem; }
+  .btn { display:inline-block; background:var(--brand); color:#fff; border:0; border-radius:6px;
+         padding:8px 16px; cursor:pointer; text-decoration:none; font:inherit; }
+  .btn.secondary { background:#fff; color:var(--brand); border:1px solid var(--brand); }
+  .btn.danger { background:var(--bad); } .btn.small { padding:3px 10px; font-size:.85rem; }
+  input[type=text], input[type=password], textarea, select {
+     width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:6px; font:inherit; background:#fff; }
+  textarea { resize:vertical; }
+  .checks { display:flex; flex-wrap:wrap; gap:6px 22px; list-style:none; padding:0; margin:0; }
+  .checks label { cursor:pointer; }
+  .field { margin-bottom:14px; } .field > label { display:block; font-weight:600; margin-bottom:4px; }
+  .errorlist { color:var(--bad); margin:4px 0; padding:0; list-style:none; font-size:.9rem; }
+  .grid3 { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { padding:8px; border-bottom:1px solid var(--line); text-align:start; vertical-align:top; }
+  th { background:#eef2f5; font-weight:600; }
+  .badge { display:inline-block; padding:1px 8px; border-radius:10px; font-size:.8rem; background:#e6ebef; }
+  .b-approved,.b-done { background:#dcefe4; color:var(--ok); }
+  .b-rejected,.b-failed { background:#f7dedc; color:var(--bad); }
+  .b-partial,.b-processing,.b-pending,.b-submitted { background:#fbeccf; color:var(--warn); }
+  .messages { list-style:none; padding:0; } .messages li { padding:10px 14px; border-radius:6px; margin-bottom:8px; background:#e6f0f3; }
+  .messages .error { background:#f7dedc; } .messages .warning { background:#fbeccf; } .messages .success { background:#dcefe4; }
+  .ltr { direction:ltr; unicode-bidi:embed; word-break:break-all; }
+  .evidence { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; margin-top:8px; }
+  .evidence img, .evidence video { width:100%; border:1px solid var(--line); border-radius:6px; max-height:420px; object-fit:contain; background:#000; }
+  .evidence img { background:#fff; }
+  pre.log { white-space:pre-wrap; background:#f7f8fa; padding:8px; border-radius:6px; font-size:.8rem; margin:6px 0 0; }
+  .form-head { text-align:center; border-bottom:2px solid var(--brand); padding-bottom:10px; margin-bottom:16px; }
+  @media print {
+    header.top, .no-print, .messages { display:none !important; }
+    body { background:#fff; } main { margin:0; max-width:none; }
+    .card { border:0; padding:0 0 10px; } video { display:none; }
+  }
+</style>
+{% block head %}{% endblock %}
+</head>
+<body>
+<header class="top">
+  <span class="brand">إدارة الشؤون الفنية — فريق الرصد والمتابعة الإلكترونية</span>
+  {% if user.is_authenticated %}
+  <nav>
+    <a href="{% url 'reports:list' %}">الطلبات</a>
+    <a href="{% url 'reports:create' %}">طلب جديد</a>
+    {% if user.is_staff %}<a href="{% url 'admin:index' %}">الإدارة</a>{% endif %}
+    <span style="margin-inline-start:14px">الكود: <b class="ltr">{{ user.username }}</b></span>
+    <form method="post" action="{% url 'logout' %}" style="display:inline">{% csrf_token %}
+      <button class="btn small secondary" style="margin-inline-start:10px">خروج</button></form>
+  </nav>
+  {% endif %}
+</header>
+<main>
+  {% if messages %}<ul class="messages">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>
