@@ -18,3 +18,7 @@ cookies/*
 # organisation branding files (mounted at runtime)
 branding/*
 !branding/README.md
+
+# local data folder: database + evidence files (bind-mounted into the container)
+data/*
+!data/README.md

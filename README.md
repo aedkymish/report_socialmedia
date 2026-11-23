@@ -41,7 +41,10 @@ cp .env.example .env        # عدّل كلمة السر و DJANGO_SECRET_KEY
 docker compose up -d --build
 ```
 ثم افتح http://localhost:8000 وادخل بالكود `DJANGO_SUPERUSER_USERNAME` الموجود في `.env`.
-- قاعدة البيانات والفيديوهات والصور تُحفظ في الـ volume `app_data` (`/app/data` داخل الحاوية).
+- قاعدة البيانات والفيديوهات والصور تُحفظ في مجلد **`data/`** بجانب المشروع (مربوط بـ `/app/data` داخل الحاوية):
+  `data/db.sqlite3` و `data/media/evidence/request_<رقم>/link_<رقم>/`.
+  - النسخ الاحتياطي: `docker compose stop` ثم انسخ مجلد `data/` كاملاً.
+  - عند الترقية من نسخة سابقة كانت تستخدم volume باسم `app_data`، تُنقل البيانات تلقائياً إلى `data/` عند أول تشغيل (مرة واحدة، والـ volume القديم يبقى نسخة احتياطية).
 - الصورة مبنية على صورة Playwright الرسمية (فيها Chromium) ومعها ffmpeg.
 - للمنصات التي تطلب تسجيل دخول أو تُظهر تحقق CAPTCHA: ضع ملف cookies المُصدَّر (`.txt` أو `.json`) داخل مجلد `cookies/` — يُلتقط تلقائياً (لتحميل الفيديو **ولتصوير الصفحة الشخصية**)، ثم تحقق بـ `docker compose exec web python manage.py check_cookies`.
 - التشخيص: `docker compose exec web python manage.py debug_profile <رابط الصفحة>`

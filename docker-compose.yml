@@ -7,9 +7,12 @@ services:
     env_file:
       - .env
     volumes:
-      - app_data:/app/data          # SQLite DB + downloaded videos + screenshots
+      - ./data:/app/data            # SQLite DB + downloaded videos + screenshots (local folder)
       - ./cookies:/app/cookies:ro   # put your cookies export (.txt/.json) here — never baked into the image
       - ./branding:/app/branding:ro # organisation logo for the PDF report (REPORT_LOGO_PATH)
+      # Previous Docker volume, read-only: copied into ./data once on first start
+      # if ./data is empty. Safe to remove this line (and the volume) afterwards.
+      - app_data:/app/legacy_data:ro
     restart: unless-stopped
     shm_size: "1gb"                 # Chromium needs more than Docker's 64MB default
 

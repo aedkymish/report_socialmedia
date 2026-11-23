@@ -56,7 +56,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.environ.get("DJANGO_DB_PATH", BASE_DIR / "db.sqlite3"),
+        "NAME": os.environ.get("DJANGO_DB_PATH", BASE_DIR / "data" / "db.sqlite3"),
         "OPTIONS": {"timeout": 20},  # background evidence threads write concurrently
     }
 }
@@ -89,7 +89,7 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
-MEDIA_ROOT = os.environ.get("DJANGO_MEDIA_ROOT", BASE_DIR / "media")
+MEDIA_ROOT = os.environ.get("DJANGO_MEDIA_ROOT", BASE_DIR / "data" / "media")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

@@ -17,3 +17,6 @@ cookies/
 
 # mounted at runtime by docker-compose
 branding/
+
+# local data folder is mounted at runtime, never copied into the image
+data/

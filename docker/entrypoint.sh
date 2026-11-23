@@ -1,6 +1,17 @@
 #!/bin/sh
 set -e
-mkdir -p "$(dirname "$DJANGO_DB_PATH")" "$DJANGO_MEDIA_ROOT"
+DATA_DIR="$(dirname "$DJANGO_DB_PATH")"
+mkdir -p "$DATA_DIR"
+
+# One-time move from the old Docker volume (mounted read-only at /app/legacy_data)
+# into the local ./data folder: only when ./data has no database yet.
+if [ -d /app/legacy_data ] && [ -f /app/legacy_data/db.sqlite3 ] && [ ! -f "$DJANGO_DB_PATH" ]; then
+  echo "Copying existing data from the old Docker volume into ./data ..."
+  cp -a /app/legacy_data/. "$DATA_DIR"/
+  echo "Done: $(find "$DATA_DIR" -type f | wc -l) files copied. The old volume is kept as a backup."
+fi
+
+mkdir -p "$DJANGO_MEDIA_ROOT"
 # Platforms (TikTok especially) change often; a fresh yt-dlp fixes most breakages.
 if [ "${YTDLP_AUTO_UPDATE:-1}" = "1" ]; then
   pip install --no-cache-dir -q -U "yt-dlp[default,curl-cffi]" >/dev/null 2>&1 \
