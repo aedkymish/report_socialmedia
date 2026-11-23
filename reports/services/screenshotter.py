@@ -8,6 +8,7 @@ still showing, it is reported in the evidence log.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlparse
@@ -46,6 +47,7 @@ class PageCleaner:
         except Exception:
             pass
         self._wait_for_content(page)
+        notes.extend(self._retry_failed_content(page))
 
         if self._visible(page, self.CAPTCHA_SELECTORS):
             notes.append(
@@ -55,6 +57,36 @@ class PageCleaner:
         elif had_captcha:
             notes.append("ظهر تحقق CAPTCHA من المنصة وتم إغلاقه قبل التصوير.")
         return notes
+
+    # Some sites render the header but fail the content request and show an
+    # in-page "Something went wrong / Refresh" state. Press their own button.
+    RETRY_BUTTON: re.Pattern | None = None
+    RETRY_SUCCESS_SELECTOR: str | None = None
+    RETRY_ATTEMPTS = 3
+    RETRY_FAILED_NOTE = ""
+
+    def _retry_failed_content(self, page) -> list[str]:
+        if not self.RETRY_BUTTON:
+            return []
+        retried = 0
+        for _ in range(self.RETRY_ATTEMPTS):
+            button = page.get_by_role("button", name=self.RETRY_BUTTON).first
+            try:
+                if not (button.count() and button.is_visible()):
+                    break
+                button.click(timeout=3000)
+            except Exception:
+                break
+            retried += 1
+            try:
+                page.wait_for_selector(self.RETRY_SUCCESS_SELECTOR, state="visible", timeout=8000)
+                page.wait_for_timeout(1500)  # let thumbnails paint
+                return [f"تعذر تحميل المحتوى أولاً، ونجح بعد إعادة المحاولة ({retried})."]
+            except Exception:
+                page.wait_for_timeout(2000)
+        if retried:
+            return [self.RETRY_FAILED_NOTE]
+        return []
 
     def _wait_for_content(self, page) -> None:
         if self.CONTENT_SELECTOR:
@@ -101,6 +133,12 @@ class TikTokCleaner(PageCleaner):
         *PageCleaner.CLOSE_SELECTORS,
     ]
     CONTENT_SELECTOR = '[data-e2e="user-post-item"] img, [data-e2e="user-title"]'
+    RETRY_BUTTON = re.compile(r"^\s*(تحديث|Refresh|Retry|Try again)\s*$", re.I)
+    RETRY_SUCCESS_SELECTOR = '[data-e2e="user-post-item"]'
+    RETRY_FAILED_NOTE = (
+        "تنبيه: بيانات الحساب ظاهرة في الصورة، لكن تيك توك رفض تحميل قائمة الفيديوهات "
+        "(حدث خطأ ما) رغم إعادة المحاولة. الحل: إضافة ملف cookies لحساب رسمي (YTDLP_COOKIES_FILE)."
+    )
 
 
 class InstagramCleaner(PageCleaner):

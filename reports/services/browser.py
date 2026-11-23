@@ -80,12 +80,21 @@ class BrowserLauncher:
                     logger.debug("skipped cookie %s", c.get("name"))
 
     def _launch(self, pw):
+        """Prefer full Chromium in new-headless mode (renders sites like a normal
+        browser); fall back to the lighter headless shell, then a known path."""
         args = ["--autoplay-policy=no-user-gesture-required", "--mute-audio"]
         if self.executable_path:
             return pw.chromium.launch(executable_path=self.executable_path, args=args)
-        try:
-            return pw.chromium.launch(args=args)
-        except Exception:
-            if self.FALLBACK_EXECUTABLE.exists():
-                return pw.chromium.launch(executable_path=str(self.FALLBACK_EXECUTABLE), args=args)
-            raise
+        attempts = [
+            lambda: pw.chromium.launch(channel="chromium", args=args),
+            lambda: pw.chromium.launch(args=args),
+        ]
+        if self.FALLBACK_EXECUTABLE.exists():
+            attempts.append(lambda: pw.chromium.launch(executable_path=str(self.FALLBACK_EXECUTABLE), args=args))
+        last_error = None
+        for attempt in attempts:
+            try:
+                return attempt()
+            except Exception as exc:
+                last_error = exc
+        raise last_error

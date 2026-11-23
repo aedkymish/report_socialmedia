@@ -75,3 +75,45 @@ class LiveCleanerTests(SimpleTestCase):
         _, _, cookies = self._run("<p>x</p>", cookies_file=fh.name)
         Path(fh.name).unlink()
         self.assertIn("sessionid", [c["name"] for c in cookies])
+
+
+ERROR_GRID = """
+<html><body>
+<h1 data-e2e="user-title">tk_test</h1>
+<div id="grid"><p>حدث خطأ ما</p><button id="r">تحديث</button></div>
+<script>
+  let clicks = 0;
+  document.getElementById('r').onclick = () => {
+    clicks++;
+    if (clicks >= {works_after}) setTimeout(() => {
+      document.getElementById('grid').innerHTML = '<div data-e2e="user-post-item">video</div>';
+    }, 300);
+  };
+</script>
+</body></html>
+"""
+
+
+class LiveRetryTests(SimpleTestCase):
+    def _run(self, works_after):
+        with BrowserLauncher().context({"width": 800, "height": 600}) as ctx:
+            page = ctx.new_page()
+            page.set_content(ERROR_GRID.replace("{works_after}", str(works_after)))
+            notes = TikTokCleaner()._retry_failed_content(page)
+            return notes, page.locator('[data-e2e="user-post-item"]').count()
+
+    def test_refresh_button_recovers_grid(self):
+        notes, items = self._run(works_after=2)
+        self.assertEqual(items, 1)
+        self.assertTrue(any("نجح بعد إعادة المحاولة (2)" in n for n in notes), notes)
+
+    def test_grid_never_loads_is_reported(self):
+        notes, items = self._run(works_after=99)
+        self.assertEqual(items, 0)
+        self.assertTrue(any("قائمة الفيديوهات" in n for n in notes), notes)
+
+    def test_no_error_state_no_notes(self):
+        with BrowserLauncher().context({"width": 800, "height": 600}) as ctx:
+            page = ctx.new_page()
+            page.set_content('<div data-e2e="user-post-item">ok</div>')
+            self.assertEqual(TikTokCleaner()._retry_failed_content(page), [])
