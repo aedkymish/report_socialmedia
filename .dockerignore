@@ -11,3 +11,6 @@ cookies.txt
 *cookies*.txt
 *cookies*.json
 *Cookies*.txt
+
+# mounted at runtime by docker-compose, never copied into the image
+cookies/

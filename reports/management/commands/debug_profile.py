@@ -14,7 +14,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from reports.services.browser import SESSION_COOKIES, BrowserLauncher, cookie_domain_matches, session_cookie_names
-from reports.services.cookies import CookieFile
+from reports.services.cookies import CookieFile, resolve_cookies_file
 from reports.services.profile_videos import ProfileVideoLister
 from reports.services.screenshotter import cleaner_for
 
@@ -42,14 +42,15 @@ class Command(BaseCommand):
     def handle(self, *args, **opts):
         url = opts["url"]
         cfg = settings.EVIDENCE
+        cookies_file = resolve_cookies_file()
         host = (urlparse(url).hostname or "").lower()
         site = next((d for d in SESSION_COOKIES if host == d or host.endswith("." + d)), None)
 
         # 1) cookie file
         self.stdout.write(self.style.MIGRATE_HEADING("1) ملف cookies"))
-        report = CookieFile(cfg["COOKIES_FILE"]).read()
+        report = CookieFile(cookies_file).read()
         if not report.cookies:
-            self.bad(f"{cfg['COOKIES_FILE'] or '(غير مضبوط)'}: {report.problem}")
+            self.bad(f"{cookies_file or '(غير مضبوط)'}: {report.problem}")
         else:
             self.ok(f"{len(report.cookies)} cookie بصيغة {report.format}")
             if site:
@@ -62,7 +63,7 @@ class Command(BaseCommand):
         # 2) browser
         self.stdout.write(self.style.MIGRATE_HEADING("2) المتصفح"))
         api_log, console_errors = [], []
-        launcher = BrowserLauncher(cfg["CHROMIUM_EXECUTABLE"], cfg["COOKIES_FILE"])
+        launcher = BrowserLauncher(cfg["CHROMIUM_EXECUTABLE"], cookies_file)
         with launcher.context({"width": 1366, "height": 1600}) as ctx:
             if site:
                 in_ctx = {c["name"] for c in ctx.cookies() if cookie_domain_matches(c["domain"], site)}
@@ -114,7 +115,7 @@ class Command(BaseCommand):
         if not opts["skip_ytdlp"]:
             self.stdout.write(self.style.MIGRATE_HEADING("4) قائمة الفيديوهات عبر yt-dlp"))
             try:
-                vids = ProfileVideoLister(cfg["COOKIES_FILE"], limit=6).list(url)
+                vids = ProfileVideoLister(cookies_file, limit=6).list(url)
                 (self.ok if vids else self.bad)(f"yt-dlp أرجع {len(vids)} فيديو")
             except Exception as exc:
                 self.bad(f"yt-dlp: {str(exc)[:200]}")

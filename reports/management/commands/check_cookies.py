@@ -7,7 +7,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from reports.services.browser import SESSION_COOKIES, cookie_domain_matches, session_cookie_names
-from reports.services.cookies import CookieFile
+from reports.services.cookies import CookieFile, resolve_cookies_file
 
 
 def tiktok_session_expiry(sid_guard_value: str) -> float | None:
@@ -23,17 +23,24 @@ class Command(BaseCommand):
     help = "فحص ملف cookies: هل يحتوي جلسة دخول لكل منصة؟"
 
     def add_arguments(self, parser):
-        parser.add_argument("--file", default=settings.EVIDENCE["COOKIES_FILE"])
+        parser.add_argument("--file", default=None, help="افتراضياً: YTDLP_COOKIES_FILE أو أحدث ملف في مجلد cookies/")
 
     def handle(self, *args, **opts):
-        path = opts["file"]
+        path = opts["file"] or resolve_cookies_file()
         if not path:
-            self.stdout.write(self.style.ERROR("YTDLP_COOKIES_FILE غير مضبوط في .env"))
+            self.stdout.write(self.style.ERROR(
+                "لا يوجد ملف cookies. ضع الملف (.txt أو .json) داخل مجلد cookies/ في المشروع "
+                f"(داخل الحاوية: {settings.EVIDENCE['COOKIES_DIR']})."))
             return
         report = CookieFile(path).read()
         cookies = report.cookies
         if not cookies:
-            self.stdout.write(self.style.ERROR(f"{path} ({report.size} bytes): {report.problem}"))
+            size = f" ({report.size} bytes)" if report.exists else ""
+            extra = ""
+            if not report.exists:
+                extra = (f" — ضع الملف داخل مجلد cookies/ في المشروع (يُربط تلقائياً بـ "
+                         f"{settings.EVIDENCE['COOKIES_DIR']}) أو احذف YTDLP_COOKIES_FILE من .env.")
+            self.stdout.write(self.style.ERROR(f"{path}{size}: {report.problem}{extra}"))
             return
         fmt = {"netscape": "Netscape cookies.txt", "json": "JSON (يُحوَّل تلقائياً)"}[report.format]
         self.stdout.write(f"{path}: {len(cookies)} cookie — الصيغة: {fmt}")

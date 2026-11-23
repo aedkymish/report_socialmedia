@@ -150,3 +150,30 @@ def _cookie(domain, name, value, path, secure, http_only, expires) -> dict:
     except (TypeError, ValueError):
         pass
     return cookie
+
+
+def resolve_cookies_file() -> str:
+    """Which cookie export to use, resolved at call time (no restart needed):
+
+    1. YTDLP_COOKIES_FILE, if it points to an existing file (relative paths are
+       resolved against the project directory);
+    2. otherwise the newest *.txt / *.json in the cookies/ folder (mounted into
+       the container by docker-compose);
+    3. otherwise the configured value (so error messages can name it), or "".
+    """
+    from django.conf import settings
+
+    configured = settings.EVIDENCE.get("COOKIES_FILE", "")
+    if configured:
+        p = Path(configured)
+        if not p.is_absolute():
+            p = Path(settings.BASE_DIR) / p
+        if p.is_file():
+            return str(p)
+    folder = Path(settings.EVIDENCE.get("COOKIES_DIR", ""))
+    if folder.is_dir():
+        candidates = [f for f in folder.iterdir()
+                      if f.is_file() and f.suffix.lower() in (".txt", ".json")]
+        if candidates:
+            return str(max(candidates, key=lambda f: f.stat().st_mtime))
+    return configured

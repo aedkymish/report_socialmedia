@@ -331,3 +331,22 @@ class LiveItemListTests(SimpleTestCase):
         self.assertEqual(imgs, 0)
         self.assertLess(elapsed, 20)  # did not burn the full 30s timeout
         self.assertTrue(any("رد فارغ على طلب item_list" in n for n in notes), notes)
+
+
+class ResolveCookiesFileTests(SimpleTestCase):
+    def test_folder_fallback_picks_newest_and_configured_wins(self):
+        import os, time
+        from reports.services.cookies import resolve_cookies_file
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: __import__("shutil").rmtree(folder, ignore_errors=True))
+        old, new = folder / "old.txt", folder / "new.json"
+        old.write_text("x"); new.write_text("[]")
+        os.utime(old, (time.time() - 100, time.time() - 100))
+        (folder / "README.md").write_text("ignored")
+        from django.conf import settings
+        with self.settings(EVIDENCE={**settings.EVIDENCE, "COOKIES_FILE": "./missing.txt", "COOKIES_DIR": str(folder)}):
+            self.assertEqual(resolve_cookies_file(), str(new))
+        with self.settings(EVIDENCE={**settings.EVIDENCE, "COOKIES_FILE": str(old), "COOKIES_DIR": str(folder)}):
+            self.assertEqual(resolve_cookies_file(), str(old))
+        with self.settings(EVIDENCE={**settings.EVIDENCE, "COOKIES_FILE": "", "COOKIES_DIR": "/nope"}):
+            self.assertEqual(resolve_cookies_file(), "")

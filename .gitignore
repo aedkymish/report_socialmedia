@@ -10,3 +10,7 @@ cookies.txt
 *cookies*.txt
 *cookies*.json
 *Cookies*.txt
+
+# cookie folder: contents are private login sessions
+cookies/*
+!cookies/README.md

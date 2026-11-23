@@ -19,6 +19,7 @@ from django.utils import timezone
 from ..models import ActionRequest, RequestLink
 from .link_analyzer import LinkAnalyzer
 from .screenshotter import ProfileScreenshotter
+from .cookies import resolve_cookies_file
 from .profile_videos import ProfileVideoLister, VideosSheetRenderer
 from .video_downloader import VideoDownloader
 
@@ -37,18 +38,19 @@ class EvidenceCollector:
     def __init__(self, analyzer=None, downloader=None, screenshotter=None,
                  video_lister=None, sheet_renderer=None):
         cfg = settings.EVIDENCE
-        self.video_lister = video_lister or ProfileVideoLister(cfg["COOKIES_FILE"])
+        cookies = resolve_cookies_file()
+        self.video_lister = video_lister or ProfileVideoLister(cookies)
         self.sheet_renderer = sheet_renderer or VideosSheetRenderer(
-            cfg["CHROMIUM_EXECUTABLE"], cfg["COOKIES_FILE"],
+            cfg["CHROMIUM_EXECUTABLE"], cookies,
         )
         self.analyzer = analyzer or LinkAnalyzer()
         self.downloader = downloader or VideoDownloader(
-            cfg["COOKIES_FILE"], cfg["MAX_VIDEO_MB"],
+            cookies, cfg["MAX_VIDEO_MB"],
             chromium_executable=cfg["CHROMIUM_EXECUTABLE"], timeout_ms=cfg["SCREENSHOT_TIMEOUT_MS"],
-            browser_cookies_file=cfg["COOKIES_FILE"],
+            browser_cookies_file=cookies,
         )
         self.screenshotter = screenshotter or ProfileScreenshotter(
-            cfg["CHROMIUM_EXECUTABLE"], cfg["SCREENSHOT_TIMEOUT_MS"], cfg["COOKIES_FILE"],
+            cfg["CHROMIUM_EXECUTABLE"], cfg["SCREENSHOT_TIMEOUT_MS"], cookies,
             cfg["CONTENT_WAIT_SECONDS"],
         )
 

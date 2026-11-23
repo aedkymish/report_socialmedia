@@ -100,6 +100,8 @@ EVIDENCE = {
     "CHROMIUM_EXECUTABLE": os.environ.get("CHROMIUM_EXECUTABLE", ""),
     # Optional Netscape cookies file for yt-dlp (needed for some private/login-walled content).
     "COOKIES_FILE": os.environ.get("YTDLP_COOKIES_FILE", ""),
+    # Fallback: newest *.txt/*.json dropped into this folder is used automatically.
+    "COOKIES_DIR": os.environ.get("EVIDENCE_COOKIES_DIR", str(BASE_DIR / "cookies")),
     "MAX_VIDEO_MB": int(os.environ.get("EVIDENCE_MAX_VIDEO_MB", "500")),
     "SCREENSHOT_TIMEOUT_MS": int(os.environ.get("EVIDENCE_SCREENSHOT_TIMEOUT_MS", "45000")),
     # Max seconds to wait for a profile's content (e.g. TikTok video thumbnails) before the shot.

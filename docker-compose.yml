@@ -8,7 +8,7 @@ services:
       - .env
     volumes:
       - app_data:/app/data          # SQLite DB + downloaded videos + screenshots
-      # - ./cookies.txt:/app/cookies.txt:ro   # optional, for login-walled platforms
+      - ./cookies:/app/cookies:ro   # put your cookies export (.txt/.json) here — never baked into the image
     restart: unless-stopped
     shm_size: "1gb"                 # Chromium needs more than Docker's 64MB default
 
