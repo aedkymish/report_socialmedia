@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.validators import URLValidator
 
 from .models import ActionRequest, ActionType, Platform
+from .widgets import LinksWidget
 
 User = get_user_model()
 
@@ -38,8 +39,10 @@ class ActionRequestForm(forms.ModelForm):
     )
     links = forms.CharField(
         label="ثالثاً: رابط الصفحة أو القناة المراد العمل عليها",
-        help_text="ضع كل رابط في سطر مستقل. روابط الفيديو تُحمَّل تلقائياً وتُصوَّر الصفحة الشخصية لصاحبها.",
-        widget=forms.Textarea(attrs={"rows": 5, "dir": "ltr", "placeholder": "https://..."}),
+        help_text="أضف رابطاً في كل حقل (أو الصق عدة روابط دفعة واحدة فتُقسَّم تلقائياً). "
+                  "روابط الفيديو تُحمَّل تلقائياً وتُصوَّر الصفحة الشخصية لصاحبها.",
+        widget=LinksWidget(),
+        error_messages={"required": "أدخل رابطاً واحداً على الأقل."},
     )
     monitor = UserCodeField(label="1. مسؤول الرصد - الكود")
     uploader = UserCodeField(label="2. المسؤول عن التحميل في القناة - الكود")
@@ -62,7 +65,8 @@ class ActionRequestForm(forms.ModelForm):
     def clean_links(self) -> list[str]:
         validator = URLValidator(schemes=["http", "https"])
         urls, seen = [], set()
-        for line in self.cleaned_data["links"].splitlines():
+        raw = self.cleaned_data["links"].replace(",", "\n").replace("،", "\n")
+        for line in raw.split():
             url = line.strip()
             if not url or url in seen:
                 continue

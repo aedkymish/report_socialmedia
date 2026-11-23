@@ -1,0 +1,85 @@
+<div class="links-widget" data-name="{{ widget.name }}">
+  <div class="links-rows">
+    {% for v in widget.rows %}
+    <div class="link-row">
+      <span class="link-num">{{ forloop.counter }}</span>
+      <input type="url" name="{{ widget.name }}" value="{{ v }}" dir="ltr" placeholder="https://..." autocomplete="off">
+      <span class="link-platform"></span>
+      <button type="button" class="link-remove" title="حذف الرابط" aria-label="حذف الرابط">✕</button>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="links-actions">
+    <button type="button" class="btn small secondary link-add">+ إضافة رابط</button>
+    <span class="muted link-count"></span>
+  </div>
+</div>
+<style>
+  .link-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .link-row input { flex:1; min-width:0; }
+  .link-num { width:22px; text-align:center; color:var(--muted); font-size:.85rem; }
+  .link-platform { min-width:78px; font-size:.8rem; color:var(--brand); white-space:nowrap; }
+  .link-remove { border:1px solid var(--line); background:#fff; border-radius:6px; cursor:pointer;
+                 width:32px; height:34px; color:var(--bad); flex:none; }
+  .links-actions { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  @media (max-width:560px) { .link-platform { display:none; } }
+</style>
+<script>
+(function () {
+  const root = document.currentScript.previousElementSibling.previousElementSibling;
+  const rows = root.querySelector('.links-rows');
+  const PLATFORMS = [
+    [/(^|\.)tiktok\.com$/, 'تيك توك'], [/(^|\.)(facebook\.com|fb\.watch|fb\.com)$/, 'فيسبوك'],
+    [/(^|\.)(t\.me|telegram\.me)$/, 'تلغرام'], [/(^|\.)instagram\.com$/, 'إنستغرام'],
+    [/(^|\.)(x\.com|twitter\.com)$/, 'إكس'],
+  ];
+  function platformOf(v) {
+    try { const h = new URL(/^https?:\/\//i.test(v) ? v : 'https://' + v).hostname.toLowerCase();
+          for (const [re, label] of PLATFORMS) if (re.test(h)) return label; return v ? 'أخرى' : '';
+    } catch (e) { return v ? '⚠ غير صالح' : ''; }
+  }
+  function refresh() {
+    const all = [...rows.querySelectorAll('.link-row')];
+    let filled = 0;
+    all.forEach((r, i) => {
+      const v = r.querySelector('input').value.trim();
+      if (v) filled++;
+      r.querySelector('.link-num').textContent = i + 1;
+      r.querySelector('.link-platform').textContent = platformOf(v);
+    });
+    root.querySelector('.link-count').textContent = filled ? `عدد الروابط: ${filled}` : '';
+  }
+  function addRow(value, after) {
+    const tpl = rows.querySelector('.link-row').cloneNode(true);
+    const input = tpl.querySelector('input'); input.value = value || '';
+    after ? after.after(tpl) : rows.appendChild(tpl);
+    refresh(); return input;
+  }
+  root.querySelector('.link-add').addEventListener('click', () => addRow('').focus());
+  rows.addEventListener('click', e => {
+    if (!e.target.classList.contains('link-remove')) return;
+    const row = e.target.closest('.link-row');
+    if (rows.querySelectorAll('.link-row').length > 1) row.remove();
+    else row.querySelector('input').value = '';
+    refresh();
+  });
+  rows.addEventListener('input', refresh);
+  rows.addEventListener('keydown', e => {           // Enter = new row instead of submitting
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+      e.preventDefault(); addRow('', e.target.closest('.link-row')).focus();
+    }
+  });
+  rows.addEventListener('paste', e => {             // paste many URLs -> many rows
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    const urls = text.split(/[\s,،]+/).map(s => s.trim()).filter(Boolean);
+    if (urls.length < 2) return;
+    e.preventDefault();
+    let row = e.target.closest('.link-row');
+    const input = row.querySelector('input');
+    if (!input.value.trim()) { input.value = urls.shift(); }
+    for (const u of urls) row = addRow(u, row).closest('.link-row');
+    refresh();
+  });
+  refresh();
+})();
+</script>

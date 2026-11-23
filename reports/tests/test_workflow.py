@@ -138,3 +138,41 @@ class SheetFallbackTests(TestCase):
         self.assertTrue(link.profile_videos_image)
         self.assertEqual(len(link.profile_videos_sha256), 64)
         self.assertIn("قائمة فيديوهات الحساب (1 فيديو)", link.evidence_log)
+
+
+class MultipleLinksFormTests(TestCase):
+    def setUp(self):
+        self.u = User.objects.create_user("M1", password="x")
+
+    def _form(self, links):
+        from django.http import QueryDict
+        from reports.forms import ActionRequestForm
+        q = QueryDict(mutable=True)
+        q.setlist("platforms", ["tiktok"]); q.setlist("actions", ["block"])
+        q.update({"description": "d", "monitor": "M1", "uploader": "M1", "platform_contact": "M1",
+                  "declaration_accepted": "on", "consent_accepted": "on"})
+        q.setlist("links", links)
+        return ActionRequestForm(q)
+
+    def test_separate_fields_are_all_kept_in_order(self):
+        f = self._form(["https://www.tiktok.com/@a/video/1", "", "t.me/chan/5",
+                        "https://x.com/acc", "https://www.tiktok.com/@a/video/1"])
+        self.assertTrue(f.is_valid(), f.errors)
+        self.assertEqual(f.cleaned_data["links"], [
+            "https://www.tiktok.com/@a/video/1", "https://t.me/chan/5", "https://x.com/acc"])
+
+    def test_comma_or_space_separated_paste_in_one_field(self):
+        f = self._form(["https://x.com/a, https://x.com/b،https://x.com/c https://x.com/d"])
+        self.assertTrue(f.is_valid(), f.errors)
+        self.assertEqual(len(f.cleaned_data["links"]), 4)
+
+    def test_all_empty_rejected_and_bad_url_named(self):
+        self.assertIn("رابطاً واحداً", str(self._form(["", " "]).errors))
+        self.assertIn("رابط غير صالح", str(self._form(["https://x.com/a", "https://exa mple"]).errors))
+
+    def test_rows_rerendered_after_validation_error(self):
+        f = self._form(["https://x.com/a", "https://x.com/b"])
+        f.data = f.data.copy(); f.data["description"] = ""
+        self.assertFalse(f.is_valid())
+        html = str(f["links"])
+        self.assertEqual(html.count('type="url" name="links"'), 2)
