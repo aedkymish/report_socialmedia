@@ -1,12 +1,22 @@
 """Diagnose the cookies.txt used for login-walled platforms.
 Prints cookie NAMES and expiry only — never values."""
 from datetime import datetime, timezone
+from urllib.parse import unquote
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from reports.services.browser import SESSION_COOKIES, cookie_domain_matches, session_cookie_names
 from reports.services.cookies import CookieFile
+
+
+def tiktok_session_expiry(sid_guard_value: str) -> float | None:
+    """sid_guard = <sid>|<created_unix>|<max_age_seconds>|<date>; return created+max_age."""
+    parts = unquote(sid_guard_value).split("|")
+    try:
+        return int(parts[1]) + int(parts[2])
+    except (IndexError, ValueError):
+        return None
 
 
 class Command(BaseCommand):
@@ -37,9 +47,16 @@ class Command(BaseCommand):
             names = ", ".join(sorted({c["name"] for c in found}))
             if not session:
                 hint = ""
-                if site == "tiktok.com" and any(c["name"] == "sid_guard" for c in found):
-                    hint = (" — يوجد sid_guard بدون sessionid: غالباً تم التصدير بعد تسجيل الخروج أو "
-                            "من ملف تعريف (Profile) آخر في المتصفح.")
+                guard = next((c for c in found if c["name"] == "sid_guard"), None)
+                if site == "tiktok.com" and guard:
+                    expired_at = tiktok_session_expiry(guard["value"])
+                    if expired_at and expired_at < now:
+                        hint = (f" — جلسة الدخول المسجلة في sid_guard انتهت بتاريخ "
+                                f"{datetime.fromtimestamp(expired_at, timezone.utc):%Y-%m-%d}. "
+                                "سجّل الدخول في تيك توك من جديد ثم صدّر الملف.")
+                    else:
+                        hint = (" — يوجد sid_guard بدون sessionid: غالباً تم التصدير بعد تسجيل الخروج أو "
+                                "من ملف تعريف (Profile) آخر في المتصفح.")
                 self.stdout.write(self.style.ERROR(
                     f"✗ {site}: لا توجد جلسة دخول ({session_name} مفقود). الموجود: {names}{hint}"))
             elif session.get("expires") and session["expires"] < now:

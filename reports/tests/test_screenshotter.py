@@ -256,3 +256,19 @@ class SessionAliasTests(SimpleTestCase):
         out = io.StringIO()
         call_command("check_cookies", file=fh.name, stdout=out)
         self.assertIn("sid_guard بدون sessionid", out.getvalue())
+
+
+class SidGuardExpiryTests(SimpleTestCase):
+    def test_expired_session_reported_with_date(self):
+        import io
+        from django.core.management import call_command
+        # created 2026-01-26, max-age 180 days -> expired 2026-07-25
+        value = "deadbeef%7C1769462457%7C15552000%7CSat%2C+25-Jul-2026+21%3A20%3A57+GMT"
+        fh = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False)
+        fh.write(f".tiktok.com\tTRUE\t/\tTRUE\t1999999999\tsid_guard\t{value}\n")
+        fh.close()
+        self.addCleanup(Path(fh.name).unlink)
+        out = io.StringIO()
+        call_command("check_cookies", file=fh.name, stdout=out)
+        self.assertIn("انتهت بتاريخ 2026-07-25", out.getvalue())
+        self.assertNotIn("deadbeef", out.getvalue())
