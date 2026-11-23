@@ -9,6 +9,7 @@ services:
     volumes:
       - app_data:/app/data          # SQLite DB + downloaded videos + screenshots
       - ./cookies:/app/cookies:ro   # put your cookies export (.txt/.json) here — never baked into the image
+      - ./branding:/app/branding:ro # organisation logo for the PDF report (REPORT_LOGO_PATH)
     restart: unless-stopped
     shm_size: "1gb"                 # Chromium needs more than Docker's 64MB default
 

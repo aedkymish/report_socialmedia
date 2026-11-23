@@ -4,10 +4,13 @@ output does not depend on the fonts installed in the container."""
 from __future__ import annotations
 
 import base64
+import logging
 from functools import lru_cache
 from pathlib import Path
 
 from .browser import BrowserLauncher
+
+logger = logging.getLogger(__name__)
 
 FONTS_DIR = Path(__file__).resolve().parent.parent / "static" / "reports" / "fonts"
 FONT_FILES = [
@@ -59,3 +62,33 @@ class PdfRenderer:
                 footer_template=self.FOOTER.format(label=footer_label),
                 margin={"top": "14mm", "bottom": "16mm", "left": "12mm", "right": "12mm"},
             )
+
+
+LOGO_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+              ".svg": "image/svg+xml", ".webp": "image/webp", ".gif": "image/gif"}
+LOGO_MAX_BYTES = 2 * 1024 * 1024
+
+
+def report_logo_data_uri() -> str:
+    """REPORT_LOGO_PATH as an embeddable data URI, or "" (report renders without a logo).
+    Read on every call so replacing the file needs no restart."""
+    from django.conf import settings
+
+    configured = settings.REPORT.get("LOGO_PATH", "").strip()
+    if not configured:
+        return ""
+    path = Path(configured)
+    if not path.is_absolute():
+        path = Path(settings.BASE_DIR) / path
+    mime = LOGO_TYPES.get(path.suffix.lower())
+    if not path.is_file():
+        logger.warning("REPORT_LOGO_PATH not found: %s", path)
+        return ""
+    if not mime:
+        logger.warning("REPORT_LOGO_PATH has an unsupported type: %s", path.suffix)
+        return ""
+    data = path.read_bytes()
+    if len(data) > LOGO_MAX_BYTES:
+        logger.warning("REPORT_LOGO_PATH is larger than 2 MB: %s", path)
+        return ""
+    return f"data:{mime};base64,{base64.b64encode(data).decode()}"

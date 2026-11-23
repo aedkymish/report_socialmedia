@@ -112,3 +112,12 @@ EVIDENCE = {
 
 # django-auditlog: keep the remote IP of the actor with each entry.
 AUDITLOG_INCLUDE_ALL_MODELS = False
+
+# --- Report branding (PDF header) ---
+REPORT = {
+    # Logo file shown in the PDF report header (PNG/JPG/SVG/WEBP). Relative paths
+    # are resolved against the project directory, e.g. "branding/logo.png".
+    "LOGO_PATH": os.environ.get("REPORT_LOGO_PATH", ""),
+    # Logo height in the PDF, in pixels (width keeps the aspect ratio).
+    "LOGO_HEIGHT": int(os.environ.get("REPORT_LOGO_HEIGHT", "70")),
+}

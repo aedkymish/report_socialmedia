@@ -14,3 +14,7 @@ cookies.txt
 # cookie folder: contents are private login sessions
 cookies/*
 !cookies/README.md
+
+# organisation branding files (mounted at runtime)
+branding/*
+!branding/README.md

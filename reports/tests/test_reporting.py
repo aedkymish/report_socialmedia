@@ -82,3 +82,43 @@ class ReportPdfTests(TestCase):
         self.assertTrue(resp["Content-Disposition"].endswith('.pdf"'))
         self.assertTrue(resp.content.startswith(b"%PDF"))
         self.assertIn(b"NotoSansArabic", resp.content)  # font embedded, not system fallback
+
+
+class ReportLogoTests(TestCase):
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        from PIL import Image
+        self.dir = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: __import__("shutil").rmtree(self.dir, ignore_errors=True))
+        self.png = self.dir / "logo.png"
+        Image.new("RGB", (40, 40), "navy").save(self.png)
+        self.u = User.objects.create_user("M1", password="x")
+        self.client.force_login(self.u)
+
+    def _pdf(self, logo_path):
+        from django.conf import settings
+        with self.settings(REPORT={**settings.REPORT, "LOGO_PATH": str(logo_path)}):
+            resp = self.client.get(reverse("reports:report"), {"export": "pdf"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.content.startswith(b"%PDF"))
+        return resp.content
+
+    def test_logo_embedded_when_configured(self):
+        self.assertIn(b"/Subtype /Image", self._pdf(self.png))
+
+    def test_missing_or_unsupported_logo_is_ignored(self):
+        from reports.services.pdf import report_logo_data_uri
+        bad = self.dir / "logo.bmp"
+        bad.write_bytes(b"BM")
+        for path in (self.dir / "nope.png", bad):
+            with self.assertLogs("reports.services.pdf", "WARNING"):
+                self.assertNotIn(b"/Subtype /Image", self._pdf(path))
+        self.assertNotIn(b"/Subtype /Image", self._pdf(""))
+
+    def test_relative_path_resolved_against_project(self):
+        from django.conf import settings
+        from reports.services.pdf import report_logo_data_uri
+        rel = self.png.relative_to(self.dir)
+        with self.settings(BASE_DIR=self.dir, REPORT={**settings.REPORT, "LOGO_PATH": str(rel)}):
+            self.assertTrue(report_logo_data_uri().startswith("data:image/png;base64,"))

@@ -14,3 +14,6 @@ cookies.txt
 
 # mounted at runtime by docker-compose, never copied into the image
 cookies/
+
+# mounted at runtime by docker-compose
+branding/

@@ -14,7 +14,7 @@ from django.template.loader import render_to_string
 from django.views.generic import TemplateView
 
 from .forms import ActionRequestForm, DecisionForm
-from .services.pdf import PdfRenderer, embedded_font_css
+from .services.pdf import PdfRenderer, embedded_font_css, report_logo_data_uri
 from .reporting import FORM_PLATFORMS, ReportBuilder, ReportCsvExporter, ReportFilter
 from .models import ActionRequest, ActionType, RequestLink
 from .services import EvidenceDispatcher, LinkAnalyzer
@@ -161,7 +161,9 @@ class ReportView(LoginRequiredMixin, TemplateView):
 
     def _pdf(self, result) -> bytes:
         html = render_to_string("reports/report_pdf.html",
-                                {"result": result, "pdf": True, "font_css": embedded_font_css()},
+                                {"result": result, "pdf": True, "font_css": embedded_font_css(),
+                                 "logo": report_logo_data_uri(),
+                                 "logo_height": settings.REPORT["LOGO_HEIGHT"]},
                                 request=self.request)
         f = result.filter
         label = f"Report {f.date_from} - {f.date_to} | {self.request.user.username}"
