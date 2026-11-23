@@ -1,4 +1,8 @@
 # syntax=docker/dockerfile:1
+# Static ffmpeg/ffprobe (amd64 + arm64) — avoids apt-get, which fails behind
+# some proxies / Docker Desktop setups ("At least one invalid signature").
+FROM mwader/static-ffmpeg:7.1 AS ffmpeg
+
 # Official Playwright image: Python + Chromium + all browser system libraries.
 FROM mcr.microsoft.com/playwright/python:v1.65.2-noble
 
@@ -9,8 +13,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     DJANGO_MEDIA_ROOT=/app/data/media
 
 # ffmpeg lets yt-dlp merge separate video/audio streams into one mp4.
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+COPY --from=ffmpeg /ffmpeg /ffprobe /usr/local/bin/
 
 WORKDIR /app
 COPY requirements.txt .
