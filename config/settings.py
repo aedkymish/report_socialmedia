@@ -57,7 +57,13 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": os.environ.get("DJANGO_DB_PATH", BASE_DIR / "data" / "db.sqlite3"),
-        "OPTIONS": {"timeout": 20},  # background evidence threads write concurrently
+        "OPTIONS": {
+            "timeout": 20,  # background evidence threads write concurrently
+            # Classic rollback journal (not WAL): every committed change lands in
+            # db.sqlite3 itself, so the file stays consistent across the Docker
+            # Desktop bind mount (WAL's shared-memory file does not cross the VM).
+            "init_command": "PRAGMA journal_mode=DELETE;",
+        },
     }
 }
 
