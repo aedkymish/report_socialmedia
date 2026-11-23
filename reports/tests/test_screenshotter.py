@@ -236,3 +236,23 @@ class LiveReadinessTests(SimpleTestCase):
         notes, imgs = self._clean(delay=999999, timeout_ms=3000)
         self.assertEqual(imgs, 0)
         self.assertTrue(any("لم تكتمل" in n for n in notes), notes)
+
+
+class SessionAliasTests(SimpleTestCase):
+    def test_tiktok_alias_cookies_count_as_session(self):
+        from reports.services.browser import has_session_cookie
+        mk = lambda n: {"name": n, "value": "v", "domain": ".tiktok.com"}
+        self.assertTrue(has_session_cookie([mk("sid_tt")], "tiktok.com"))
+        self.assertTrue(has_session_cookie([mk("sessionid_ss")], "tiktok.com"))
+        self.assertFalse(has_session_cookie([mk("sid_guard"), mk("ttwid")], "tiktok.com"))
+
+    def test_sid_guard_hint(self):
+        import io
+        from django.core.management import call_command
+        fh = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False)
+        fh.write(".tiktok.com\tTRUE\t/\tTRUE\t1999999999\tsid_guard\tx\n")
+        fh.close()
+        self.addCleanup(Path(fh.name).unlink)
+        out = io.StringIO()
+        call_command("check_cookies", file=fh.name, stdout=out)
+        self.assertIn("sid_guard بدون sessionid", out.getvalue())

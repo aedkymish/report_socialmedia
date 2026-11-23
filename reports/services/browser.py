@@ -21,7 +21,7 @@ def load_netscape_cookies(path: str) -> list[dict]:
     return CookieFile(path).load()
 
 
-# Cookie that proves a logged-in session, per platform.
+# Cookie that proves a logged-in session, per platform (first name is shown in messages).
 SESSION_COOKIES = {
     "tiktok.com": "sessionid",
     "instagram.com": "sessionid",
@@ -36,12 +36,22 @@ def cookie_domain_matches(cookie_domain: str, site: str) -> bool:
     return d == site or d.endswith("." + site)
 
 
+# Equivalent session cookies some platforms set instead of / alongside the main one.
+SESSION_ALIASES = {
+    "tiktok.com": {"sessionid", "sessionid_ss", "sid_tt"},
+}
+
+
+def session_cookie_names(site: str) -> set[str]:
+    return SESSION_ALIASES.get(site, {SESSION_COOKIES[site]} if site in SESSION_COOKIES else set())
+
+
 def has_session_cookie(cookies: list[dict], site: str) -> bool | None:
     """True/False for known platforms, None when we don't know which cookie to expect."""
-    name = SESSION_COOKIES.get(site)
-    if not name:
+    names = session_cookie_names(site)
+    if not names:
         return None
-    return any(c["name"] == name and c["value"] and cookie_domain_matches(c["domain"], site) for c in cookies)
+    return any(c["name"] in names and c["value"] and cookie_domain_matches(c["domain"], site) for c in cookies)
 
 
 class BrowserLauncher:

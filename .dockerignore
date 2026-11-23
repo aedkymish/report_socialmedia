@@ -6,3 +6,8 @@ media
 staticfiles
 .env
 cookies.txt
+
+# Any browser cookie export (login sessions) — never commit or bake into images
+*cookies*.txt
+*cookies*.json
+*Cookies*.txt

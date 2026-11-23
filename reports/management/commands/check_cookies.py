@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from reports.services.browser import SESSION_COOKIES, cookie_domain_matches
+from reports.services.browser import SESSION_COOKIES, cookie_domain_matches, session_cookie_names
 from reports.services.cookies import CookieFile
 
 
@@ -32,11 +32,16 @@ class Command(BaseCommand):
             found = [c for c in cookies if cookie_domain_matches(c["domain"], site)]
             if not found:
                 continue
-            session = next((c for c in found if c["name"] == session_name and c["value"]), None)
+            valid = session_cookie_names(site)
+            session = next((c for c in found if c["name"] in valid and c["value"]), None)
             names = ", ".join(sorted({c["name"] for c in found}))
             if not session:
+                hint = ""
+                if site == "tiktok.com" and any(c["name"] == "sid_guard" for c in found):
+                    hint = (" — يوجد sid_guard بدون sessionid: غالباً تم التصدير بعد تسجيل الخروج أو "
+                            "من ملف تعريف (Profile) آخر في المتصفح.")
                 self.stdout.write(self.style.ERROR(
-                    f"✗ {site}: لا توجد جلسة دخول ({session_name} مفقود). الموجود: {names}"))
+                    f"✗ {site}: لا توجد جلسة دخول ({session_name} مفقود). الموجود: {names}{hint}"))
             elif session.get("expires") and session["expires"] < now:
                 self.stdout.write(self.style.ERROR(f"✗ {site}: جلسة الدخول منتهية الصلاحية — صدّر الملف من جديد"))
             else:

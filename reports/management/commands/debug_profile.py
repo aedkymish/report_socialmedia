@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from reports.services.browser import SESSION_COOKIES, BrowserLauncher, cookie_domain_matches
+from reports.services.browser import SESSION_COOKIES, BrowserLauncher, cookie_domain_matches, session_cookie_names
 from reports.services.cookies import CookieFile
 from reports.services.profile_videos import ProfileVideoLister
 from reports.services.screenshotter import cleaner_for
@@ -53,9 +53,10 @@ class Command(BaseCommand):
             self.ok(f"{len(report.cookies)} cookie بصيغة {report.format}")
             if site:
                 names = {c["name"] for c in report.cookies if cookie_domain_matches(c["domain"], site)}
-                (self.ok if SESSION_COOKIES[site] in names else self.bad)(
+                has = bool(names & session_cookie_names(site))
+                (self.ok if has else self.bad)(
                     f"{site}: {len(names)} cookie، جلسة الدخول ({SESSION_COOKIES[site]}) "
-                    + ("موجودة" if SESSION_COOKIES[site] in names else "مفقودة"))
+                    + ("موجودة" if has else "مفقودة"))
 
         # 2) browser
         self.stdout.write(self.style.MIGRATE_HEADING("2) المتصفح"))
@@ -64,9 +65,10 @@ class Command(BaseCommand):
         with launcher.context({"width": 1366, "height": 1600}) as ctx:
             if site:
                 in_ctx = {c["name"] for c in ctx.cookies() if cookie_domain_matches(c["domain"], site)}
-                (self.ok if SESSION_COOKIES[site] in in_ctx else self.bad)(
+                applied = bool(in_ctx & session_cookie_names(site))
+                (self.ok if applied else self.bad)(
                     f"cookies داخل المتصفح لـ {site}: {len(in_ctx)} — جلسة الدخول "
-                    + ("مُطبّقة" if SESSION_COOKIES[site] in in_ctx else "غير مُطبّقة"))
+                    + ("مُطبّقة" if applied else "غير مُطبّقة"))
             page = ctx.new_page()
             page.on("console", lambda m: m.type == "error" and console_errors.append(m.text[:120]))
             page.on("response", lambda r: any(h in r.url for h in API_HINTS) and api_log.append(r))
