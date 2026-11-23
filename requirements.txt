@@ -1,5 +1,5 @@
 Django>=5.1,<6
-yt-dlp>=2025.1.1
+yt-dlp[default,curl-cffi]>=2025.1.1
 # Must match the Playwright Docker base image tag (see Dockerfile).
 playwright==1.65.2
 Pillow>=10

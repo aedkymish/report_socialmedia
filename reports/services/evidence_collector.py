@@ -36,7 +36,10 @@ class EvidenceCollector:
     def __init__(self, analyzer=None, downloader=None, screenshotter=None):
         cfg = settings.EVIDENCE
         self.analyzer = analyzer or LinkAnalyzer()
-        self.downloader = downloader or VideoDownloader(cfg["COOKIES_FILE"], cfg["MAX_VIDEO_MB"])
+        self.downloader = downloader or VideoDownloader(
+            cfg["COOKIES_FILE"], cfg["MAX_VIDEO_MB"],
+            chromium_executable=cfg["CHROMIUM_EXECUTABLE"], timeout_ms=cfg["SCREENSHOT_TIMEOUT_MS"],
+        )
         self.screenshotter = screenshotter or ProfileScreenshotter(
             cfg["CHROMIUM_EXECUTABLE"], cfg["SCREENSHOT_TIMEOUT_MS"],
         )
@@ -104,7 +107,8 @@ class EvidenceCollector:
         link.video_sha256 = sha256_of(result.file_path)
         with open(result.file_path, "rb") as fh:
             link.video_file.save(result.file_path.name, File(fh), save=False)
-        log.append(f"تم تحميل الفيديو ({result.file_path.stat().st_size // 1024} KB) SHA-256={link.video_sha256}")
+        via = "المتصفح" if result.method == "browser" else result.method
+        log.append(f"تم تحميل الفيديو عبر {via} ({result.file_path.stat().st_size // 1024} KB) SHA-256={link.video_sha256}")
         return True
 
     def _collect_screenshot(self, link: RequestLink, url: str, out: Path, log: list[str]) -> bool:
