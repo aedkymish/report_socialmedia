@@ -18,6 +18,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from .browser import BrowserLauncher
+from .cookies import CookieFile
 
 logger = logging.getLogger(__name__)
 
@@ -77,8 +78,9 @@ class YtDlpStrategy(VideoStrategy):
         }
         if has_ffmpeg:
             opts["merge_output_format"] = "mp4"
-        if self.cookies_file:
-            opts["cookiefile"] = self.cookies_file
+        cookie_path = CookieFile(self.cookies_file).as_netscape_path() if self.cookies_file else ""
+        if cookie_path:
+            opts["cookiefile"] = cookie_path  # JSON exports are converted on the fly
         target = self._impersonate_target()
         if target is not None:
             opts["impersonate"] = target

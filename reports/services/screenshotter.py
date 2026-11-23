@@ -13,7 +13,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlparse
 
-from .browser import SESSION_COOKIES, BrowserLauncher, has_session_cookie, load_netscape_cookies
+from .browser import SESSION_COOKIES, BrowserLauncher, has_session_cookie
+from .cookies import CookieFile
 
 
 @dataclass
@@ -204,9 +205,10 @@ class ProfileScreenshotter:
             return []
         if not self.cookies_file:
             return [f"لم يُضبط ملف cookies؛ المتصفح يزور {site} كزائر غير مسجّل."]
-        cookies = load_netscape_cookies(self.cookies_file)
+        report = CookieFile(self.cookies_file).read()
+        cookies = report.cookies
         if not cookies:
-            return [f"ملف cookies ({self.cookies_file}) غير موجود أو فارغ أو بصيغة غير صحيحة."]
+            return [f"تعذر قراءة ملف cookies ({self.cookies_file}): {report.problem}"]
         if has_session_cookie(cookies, site) is False:
             return [f"ملف cookies لا يحتوي جلسة دخول لـ {site} (الكوكي {SESSION_COOKIES[site]} مفقود). "
                     "صدّره مرة أخرى وأنت مسجّل الدخول وعلى صفحة الموقع نفسه."]

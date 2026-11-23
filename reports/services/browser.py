@@ -6,6 +6,8 @@ import logging
 from contextlib import contextmanager
 from pathlib import Path
 
+from .cookies import CookieFile
+
 logger = logging.getLogger(__name__)
 
 USER_AGENT = (
@@ -15,32 +17,8 @@ USER_AGENT = (
 
 
 def load_netscape_cookies(path: str) -> list[dict]:
-    """Parse a cookies.txt (Netscape format, as exported by browser extensions)
-    into Playwright cookie dicts. Invalid lines are skipped."""
-    if not path or not Path(path).is_file():
-        return []
-    cookies = []
-    for raw in Path(path).read_text(encoding="utf-8", errors="ignore").splitlines():
-        http_only = raw.startswith("#HttpOnly_")
-        line = raw[len("#HttpOnly_"):] if http_only else raw
-        if not line.strip() or line.startswith("#"):
-            continue
-        parts = line.split("\t")
-        if len(parts) != 7:
-            continue
-        domain, _subdomains, cpath, secure, expires, name, value = parts
-        cookie = {
-            "name": name, "value": value.strip(), "domain": domain, "path": cpath or "/",
-            "secure": secure.upper() == "TRUE", "httpOnly": http_only,
-        }
-        try:
-            exp = int(float(expires))
-            if exp > 0:
-                cookie["expires"] = exp
-        except ValueError:
-            pass
-        cookies.append(cookie)
-    return cookies
+    """Backward-compatible name: loads Netscape *or* JSON cookie exports."""
+    return CookieFile(path).load()
 
 
 # Cookie that proves a logged-in session, per platform.

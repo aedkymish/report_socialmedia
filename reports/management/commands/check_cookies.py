@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from reports.services.browser import SESSION_COOKIES, cookie_domain_matches, load_netscape_cookies
+from reports.services.browser import SESSION_COOKIES, cookie_domain_matches
+from reports.services.cookies import CookieFile
 
 
 class Command(BaseCommand):
@@ -19,11 +20,13 @@ class Command(BaseCommand):
         if not path:
             self.stdout.write(self.style.ERROR("YTDLP_COOKIES_FILE غير مضبوط في .env"))
             return
-        cookies = load_netscape_cookies(path)
+        report = CookieFile(path).read()
+        cookies = report.cookies
         if not cookies:
-            self.stdout.write(self.style.ERROR(f"{path}: غير موجود أو فارغ أو ليس بصيغة Netscape cookies.txt"))
+            self.stdout.write(self.style.ERROR(f"{path} ({report.size} bytes): {report.problem}"))
             return
-        self.stdout.write(f"{path}: {len(cookies)} cookie")
+        fmt = {"netscape": "Netscape cookies.txt", "json": "JSON (يُحوَّل تلقائياً)"}[report.format]
+        self.stdout.write(f"{path}: {len(cookies)} cookie — الصيغة: {fmt}")
         now = datetime.now(timezone.utc).timestamp()
         for site, session_name in dict.fromkeys(SESSION_COOKIES.items()):
             found = [c for c in cookies if cookie_domain_matches(c["domain"], site)]

@@ -150,3 +150,53 @@ class SessionCookieTests(SimpleTestCase):
         self.assertIn("✗ tiktok.com", text)
         self.assertIn("✓ instagram.com", text)
         self.assertNotIn("SECRET", text)  # values are never printed
+
+
+class CookieFormatTests(SimpleTestCase):
+    def _file(self, text):
+        fh = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8")
+        fh.write(text)
+        fh.close()
+        self.addCleanup(Path(fh.name).unlink)
+        return fh.name
+
+    def test_cookie_editor_json(self):
+        import json
+        from reports.services.cookies import CookieFile
+        f = self._file(json.dumps([
+            {"domain": ".tiktok.com", "name": "sessionid", "value": "abc", "path": "/",
+             "secure": True, "httpOnly": True, "expirationDate": 1999999999.5},
+            {"domain": ".tiktok.com", "name": "ttwid", "value": "x", "session": True},
+        ]))
+        cf = CookieFile(f)
+        report = cf.read()
+        self.assertEqual(report.format, "json")
+        self.assertEqual([c["name"] for c in report.cookies], ["sessionid", "ttwid"])
+        converted = Path(cf.as_netscape_path())
+        self.addCleanup(converted.unlink)
+        text = converted.read_text()
+        self.assertIn("#HttpOnly_.tiktok.com\tTRUE\t/\tTRUE\t1999999999\tsessionid\tabc", text)
+        self.assertEqual(CookieFile(str(converted)).read().format, "netscape")
+
+    def test_space_separated_crlf_bom(self):
+        from reports.services.cookies import CookieFile
+        f = self._file("﻿# Netscape\r\n.tiktok.com TRUE / TRUE 1999999999 sessionid abc\r\n")
+        cookies = CookieFile(f).load()
+        self.assertEqual(cookies[0]["name"], "sessionid")
+        self.assertEqual(cookies[0]["value"], "abc")
+
+    def test_html_and_garbage_explained(self):
+        from reports.services.cookies import CookieFile
+        self.assertIn("HTML", CookieFile(self._file("<!doctype html><html>")).read().problem)
+        problem = CookieFile(self._file("hello world\n")).read().problem
+        self.assertIn("أول سطر", problem)
+        self.assertNotIn("hello", problem)
+
+    def test_command_reports_problem_without_values(self):
+        import io
+        from django.core.management import call_command
+        f = self._file("sessionid=SECRET; ttwid=SECRET2\n")
+        out = io.StringIO()
+        call_command("check_cookies", file=f, stdout=out)
+        self.assertIn("أدوات المطوّر", out.getvalue())
+        self.assertNotIn("SECRET", out.getvalue())
