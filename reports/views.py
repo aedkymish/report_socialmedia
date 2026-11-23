@@ -14,7 +14,7 @@ from django.template.loader import render_to_string
 from django.views.generic import TemplateView
 
 from .forms import ActionRequestForm, AuthorizedPersonsForm, DecisionForm
-from .services.pdf import PdfRenderer, embedded_font_css, report_logo_data_uri
+from .services.pdf import PdfRenderer, embedded_font_css, report_logo_data_uri, resolve_report_logo
 from .reporting import FORM_PLATFORMS, ReportBuilder, ReportCsvExporter, ReportFilter
 from .models import ActionRequest, ActionType, RequestLink
 from .services import EvidenceDispatcher, LinkAnalyzer
@@ -209,6 +209,9 @@ class ReportView(LoginRequiredMixin, TemplateView):
         ctx = super().get_context_data(**kwargs)
         query = self.request.GET.copy()
         query.pop("export", None)
+        if resolve_report_logo():
+            from django.urls import reverse
+            ctx.update(logo=reverse("reports:logo"), logo_height=settings.REPORT["LOGO_HEIGHT"])
         ctx.update(
             platforms=FORM_PLATFORMS,
             actions=ActionType.choices,
@@ -216,3 +219,18 @@ class ReportView(LoginRequiredMixin, TemplateView):
             query=query.urlencode(),
         )
         return ctx
+
+
+class BrandingLogoView(LoginRequiredMixin, View):
+    """Serves REPORT_LOGO_PATH (from ./branding) to signed-in users."""
+
+    def get(self, request):
+        from django.http import FileResponse, Http404
+
+        logo = resolve_report_logo()
+        if not logo:
+            raise Http404("no logo configured")
+        path, mime = logo
+        response = FileResponse(open(path, "rb"), content_type=mime)
+        response["Cache-Control"] = "private, max-age=300"
+        return response

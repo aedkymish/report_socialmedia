@@ -3,11 +3,15 @@
 {% block head %}{% if processing %}<meta http-equiv="refresh" content="8">{% endif %}{% endblock %}
 {% block content %}
 <div class="card">
-  <div class="form-head">
+  <div class="form-head{% if branding_logo %} with-logo{% endif %}">
+    {% if branding_logo %}<div class="head-logo"><img src="{% url 'reports:logo' %}" alt="شعار المؤسسة" style="max-height:{{ branding_logo_height }}px"></div>{% endif %}
+    <div class="head-text">
     <div class="muted">إدارة الشؤون الفنية — فريق الرصد والمتابعة الإلكترونية</div>
     <h1>نموذج طلب إجراء (حجب - قفل - حظر - توثيق) للصفحات والقنوات الرسمية</h1>
     <div>طلب رقم <b>{{ object.pk }}</b> — <span class="badge b-{{ object.status }}">{{ object.get_status_display }}</span>
       — {{ object.created_at|date:"Y/m/d H:i" }}</div>
+    </div>
+    {% if branding_logo %}<div class="head-spacer"></div>{% endif %}
   </div>
   <div class="no-print" style="text-align:left;margin-bottom:10px"><button class="btn small secondary" onclick="window.print()">طباعة</button></div>
 

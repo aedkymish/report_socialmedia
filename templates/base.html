@@ -49,6 +49,18 @@
   .evidence img { background:#fff; }
   pre.log { white-space:pre-wrap; background:#f7f8fa; padding:8px; border-radius:6px; font-size:.8rem; margin:6px 0 0; }
   .form-head { text-align:center; border-bottom:2px solid var(--brand); padding-bottom:10px; margin-bottom:16px; }
+  /* Logo in its own column; an equal empty column on the other side keeps the
+     text centred. Grid cells cannot overlap, whatever the title length. */
+  .form-head.with-logo { display:grid; grid-template-columns:var(--logo-col, 120px) minmax(0,1fr) var(--logo-col, 120px);
+                         align-items:center; column-gap:12px; }
+  .form-head .head-logo { justify-self:start; display:flex; align-items:center; }
+  .form-head .head-logo img { max-width:100%; width:auto; object-fit:contain; display:block; }
+  .form-head .head-text { min-width:0; }
+  @media (max-width:560px) {
+    .form-head.with-logo { grid-template-columns:1fr; row-gap:8px; }
+    .form-head .head-logo { justify-self:center; }
+    .form-head .head-spacer { display:none; }
+  }
   @media print {
     header.top, .no-print, .messages { display:none !important; }
     body { background:#fff; } main { margin:0; max-width:none; }

@@ -69,26 +69,34 @@ LOGO_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
 LOGO_MAX_BYTES = 2 * 1024 * 1024
 
 
-def report_logo_data_uri() -> str:
-    """REPORT_LOGO_PATH as an embeddable data URI, or "" (report renders without a logo).
+def resolve_report_logo() -> tuple[Path, str] | None:
+    """(path, mime) of REPORT_LOGO_PATH if it is usable, else None (with a warning).
     Read on every call so replacing the file needs no restart."""
     from django.conf import settings
 
     configured = settings.REPORT.get("LOGO_PATH", "").strip()
     if not configured:
-        return ""
+        return None
     path = Path(configured)
     if not path.is_absolute():
         path = Path(settings.BASE_DIR) / path
     mime = LOGO_TYPES.get(path.suffix.lower())
     if not path.is_file():
         logger.warning("REPORT_LOGO_PATH not found: %s", path)
-        return ""
+        return None
     if not mime:
         logger.warning("REPORT_LOGO_PATH has an unsupported type: %s", path.suffix)
-        return ""
-    data = path.read_bytes()
-    if len(data) > LOGO_MAX_BYTES:
+        return None
+    if path.stat().st_size > LOGO_MAX_BYTES:
         logger.warning("REPORT_LOGO_PATH is larger than 2 MB: %s", path)
+        return None
+    return path, mime
+
+
+def report_logo_data_uri() -> str:
+    """REPORT_LOGO_PATH as an embeddable data URI (for the PDF), or ""."""
+    logo = resolve_report_logo()
+    if not logo:
         return ""
-    return f"data:{mime};base64,{base64.b64encode(data).decode()}"
+    path, mime = logo
+    return f"data:{mime};base64,{base64.b64encode(path.read_bytes()).decode()}"

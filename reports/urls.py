@@ -12,4 +12,5 @@ urlpatterns = [
     path("<int:pk>/authorized/", views.AuthorizedPersonsUpdateView.as_view(), name="authorized"),
     path("<int:pk>/retry/", views.RetryEvidenceView.as_view(), name="retry"),
     path("reports/", views.ReportView.as_view(), name="report"),
+    path("branding/logo/", views.BrandingLogoView.as_view(), name="logo"),
 ]

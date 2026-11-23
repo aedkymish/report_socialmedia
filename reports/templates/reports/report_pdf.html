@@ -15,9 +15,12 @@
   .ltr { direction:ltr; unicode-bidi:embed; }
   .card { margin-bottom:14px; }
   .form-head { text-align:center; border-bottom:2px solid var(--brand); padding-bottom:8px; margin-bottom:12px; }
-  /* logo on the right (start side in RTL); title block stays centred on the page */
-  .form-head.with-logo { position:relative; min-height:calc({{ logo_height }}px + 4px); }
-  .report-logo { position:absolute; top:0; right:0; max-width:35mm; object-fit:contain; }
+  /* logo in its own grid column (right side in RTL), equal spacer on the left:
+     the title stays centred and can never overlap the logo */
+  .form-head.with-logo { display:grid; grid-template-columns:35mm minmax(0,1fr) 35mm; align-items:center; column-gap:4mm; }
+  .form-head .head-logo { justify-self:start; display:flex; align-items:center; }
+  .form-head .head-logo img { max-width:100%; width:auto; object-fit:contain; display:block; }
+  .form-head .head-text { min-width:0; }
   table { width:100%; border-collapse:collapse; font-size:9.5pt; }
   th, td { padding:5px 6px; border-bottom:1px solid var(--line); text-align:start; vertical-align:top; }
   th { background:#eef2f5; font-weight:700; }

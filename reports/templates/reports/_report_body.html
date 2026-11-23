@@ -1,6 +1,7 @@
 <div class="card">
   <div class="form-head{% if logo %} with-logo{% endif %}">
-    {% if logo %}<img class="report-logo" src="{{ logo }}" alt="شعار المؤسسة" style="height:{{ logo_height }}px">{% endif %}
+    {% if logo %}<div class="head-logo"><img src="{{ logo }}" alt="شعار المؤسسة" style="max-height:{{ logo_height }}px"></div>{% endif %}
+    <div class="head-text">
     <div class="muted">إدارة الشؤون الفنية — فريق الرصد والمتابعة الإلكترونية</div>
     <h1>تقرير طلبات الإجراء</h1>
     <div>من <b>{{ f.date_from|date:"Y/m/d" }}</b> إلى <b>{{ f.date_to|date:"Y/m/d" }}</b> ({{ f.days }} يوم)
@@ -8,6 +9,8 @@
       {% if f.actions %} — الإجراءات: {% for b in result.by_action %}{{ b.label }}{% if not forloop.last %}، {% endif %}{% endfor %}{% endif %}
     </div>
     {% if pdf %}<div class="muted" style="font-size:.8rem;margin-top:4px">أُعدّ بواسطة <span class="ltr">{{ request.user.username }}</span> بتاريخ {% now "Y/m/d H:i" %}</div>{% endif %}
+    </div>
+    {% if logo %}<div class="head-spacer"></div>{% endif %}
   </div>
 
   <div class="tiles">
