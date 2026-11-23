@@ -8,8 +8,12 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView
 
+from django.http import HttpResponse
+from django.views.generic import TemplateView
+
 from .forms import ActionRequestForm, DecisionForm
-from .models import ActionRequest, RequestLink
+from .reporting import FORM_PLATFORMS, ReportBuilder, ReportCsvExporter, ReportFilter
+from .models import ActionRequest, ActionType, RequestLink
 from .services import EvidenceDispatcher, LinkAnalyzer
 
 
@@ -136,3 +140,30 @@ class RetryEvidenceView(LoginRequiredMixin, View):
             EvidenceDispatcher().dispatch(obj, links)
             messages.info(request, f"أُعيدت المعالجة لعدد {len(links)} رابط.")
         return redirect(obj)
+
+
+class ReportView(LoginRequiredMixin, TemplateView):
+    """التقارير: حسب الفترة والمنصة ونوع الإجراء، مع تصدير CSV وطباعة."""
+
+    template_name = "reports/report.html"
+
+    def get(self, request, *args, **kwargs):
+        result = ReportBuilder().build(ReportFilter.from_query(request.GET))
+        if request.GET.get("export") == "csv":
+            f = result.filter
+            response = HttpResponse(ReportCsvExporter().export(result), content_type="text/csv; charset=utf-8")
+            response["Content-Disposition"] = f'attachment; filename="report_{f.date_from}_{f.date_to}.csv"'
+            return response
+        return self.render_to_response(self.get_context_data(result=result))
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        query = self.request.GET.copy()
+        query.pop("export", None)
+        ctx.update(
+            platforms=FORM_PLATFORMS,
+            actions=ActionType.choices,
+            statuses=ActionRequest.Status.choices,
+            query=query.urlencode(),
+        )
+        return ctx

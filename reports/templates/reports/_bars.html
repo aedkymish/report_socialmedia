@@ -1,0 +1,9 @@
+<div class="bars" role="table" aria-label="{{ title }}">
+  {% for b in bars %}
+  <div class="bar-row" role="row" title="{{ b.label }}: {{ b.count }}">
+    <span class="bar-label" role="cell">{{ b.label }}</span>
+    <span class="bar-track" role="cell"><span class="bar-fill" style="width:{{ b.pct|floatformat:1 }}%"></span></span>
+    <span class="bar-value" role="cell">{{ b.count }}</span>
+  </div>
+  {% empty %}<p class="muted">لا توجد بيانات.</p>{% endfor %}
+</div>

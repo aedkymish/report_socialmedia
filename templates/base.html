@@ -37,6 +37,9 @@
   .b-approved,.b-done { background:#dcefe4; color:var(--ok); }
   .b-rejected,.b-failed { background:#f7dedc; color:var(--bad); }
   .b-partial,.b-processing,.b-pending,.b-submitted { background:#fbeccf; color:var(--warn); }
+  .filters { display:flex; gap:8px; margin:12px 0; flex-wrap:wrap; align-items:center; }
+  .filters input[type=date] { width:auto; padding:7px 8px; border:1px solid var(--line); border-radius:6px; font:inherit; }
+  .pagination { margin-top:12px; }
   .messages { list-style:none; padding:0; } .messages li { padding:10px 14px; border-radius:6px; margin-bottom:8px; background:#e6f0f3; }
   .messages .error { background:#f7dedc; } .messages .warning { background:#fbeccf; } .messages .success { background:#dcefe4; }
   .ltr { direction:ltr; unicode-bidi:embed; word-break:break-all; }
@@ -60,7 +63,11 @@
   <nav>
     <a href="{% url 'reports:list' %}">الطلبات</a>
     <a href="{% url 'reports:create' %}">طلب جديد</a>
-    {% if user.is_staff %}<a href="{% url 'admin:index' %}">الإدارة</a>{% endif %}
+    <a href="{% url 'reports:report' %}">التقارير</a>
+    {% if user.is_superuser %}
+    <a href="{% url 'accounts:list' %}">المستخدمون</a>
+    <a href="{% url 'accounts:audit' %}">سجل التدقيق</a>
+    {% endif %}
     <span style="margin-inline-start:14px">الكود: <b class="ltr">{{ user.username }}</b></span>
     <form method="post" action="{% url 'logout' %}" style="display:inline">{% csrf_token %}
       <button class="btn small secondary" style="margin-inline-start:10px">خروج</button></form>

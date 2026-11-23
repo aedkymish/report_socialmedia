@@ -13,12 +13,24 @@
 - صفحة الطلب قابلة للطباعة بنفس ترتيب النموذج الورقي.
 - مخطط سير العمل بصيغة BPMN 2.0 في الملف `docs/workflow.bpmn`.
 
+## الصلاحيات
+| الصفحة | من يراها |
+|---|---|
+| الطلبات، طلب جديد، التقارير | كل المستخدمين المسجّلين |
+| اعتماد/رفض الطلب | المسؤول المعتمد أو مدير النظام |
+| إدارة المستخدمين، سجل التدقيق، لوحة Django | **مدير النظام (Superadmin) فقط** |
+
+- **سجل التدقيق** (django-auditlog): يسجّل كل إنشاء/تعديل/حذف على المستخدمين والطلبات والروابط مع المنفّذ وعنوان IP والقيم قبل/بعد (كلمات المرور لا تُسجَّل).
+- **التقارير**: حسب الفترة والمنصة ونوع الإجراء والحالة، مع مؤشرات ورسوم أعمدة وتصدير CSV (يفتح في Excel) وطباعة.
+
 ## البنية (MVC / OOP)
 | الطبقة | الملفات |
 |---|---|
 | Model | `accounts/models.py` (User + Role)، `reports/models.py` (ActionRequest, RequestLink) |
 | View (القوالب) | `templates/`، `reports/templates/reports/` |
 | Controller | `reports/views.py` (Class-Based Views)، `reports/forms.py` |
+| Reporting | `reports/reporting.py`: `ReportFilter`، `ReportBuilder`، `ReportCsvExporter` |
+| Users / Audit | `accounts/views.py` (`SuperuserRequiredMixin`)، django-auditlog |
 | Services | `reports/services/`: `LinkAnalyzer`، `VideoDownloader`، `ProfileScreenshotter`، `EvidenceCollector`، `EvidenceDispatcher` |
 
 ## التشغيل عبر Docker (موصى به)

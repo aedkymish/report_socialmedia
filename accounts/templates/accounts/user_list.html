@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}إدارة المستخدمين{% endblock %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+    <h1>إدارة المستخدمين</h1>
+    <a class="btn" href="{% url 'accounts:create' %}">+ مستخدم جديد</a>
+  </div>
+  <form method="get" class="filters">
+    <input type="text" name="q" value="{{ request.GET.q }}" placeholder="بحث بالكود أو الاسم" style="flex:1;min-width:180px">
+    <select name="role" style="width:auto">
+      <option value="">كل الصفات</option>
+      {% for v, l in roles %}<option value="{{ v }}" {% if request.GET.role == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select>
+    <select name="active" style="width:auto">
+      <option value="">الكل</option>
+      <option value="1" {% if request.GET.active == "1" %}selected{% endif %}>مفعّل</option>
+      <option value="0" {% if request.GET.active == "0" %}selected{% endif %}>معطّل</option>
+    </select>
+    <button class="btn secondary">تصفية</button>
+  </form>
+  <div style="overflow-x:auto">
+  <table>
+    <tr><th>الكود</th><th>الاسم</th><th>الصفة</th><th>الحالة</th><th>آخر دخول</th><th></th></tr>
+    {% for u in object_list %}
+    <tr>
+      <td class="ltr" style="white-space:nowrap"><b>{{ u.username }}</b></td>
+      <td>{{ u.full_name }}</td>
+      <td>{{ u.get_role_display }}{% if u.is_superuser %} <span class="badge b-approved">مدير النظام</span>{% endif %}</td>
+      <td>{% if u.is_active %}<span class="badge b-done">مفعّل</span>{% else %}<span class="badge b-rejected">معطّل</span>{% endif %}</td>
+      <td>{{ u.last_login|date:"Y/m/d H:i"|default:"—" }}</td>
+      <td style="white-space:nowrap">
+        <a class="btn small secondary" href="{% url 'accounts:edit' u.pk %}">تعديل</a>
+        <a class="btn small secondary" href="{% url 'accounts:password' u.pk %}">كلمة المرور</a>
+      </td>
+    </tr>
+    {% empty %}<tr><td colspan="6" class="muted">لا يوجد مستخدمون.</td></tr>{% endfor %}
+  </table>
+  </div>
+  {% include "_pagination.html" %}
+</div>
+{% endblock %}

@@ -144,3 +144,9 @@ class RequestLink(models.Model):
 
     def __str__(self) -> str:
         return self.url
+
+
+from auditlog.registry import auditlog  # noqa: E402
+
+auditlog.register(ActionRequest)
+auditlog.register(RequestLink, exclude_fields=["evidence_log"])

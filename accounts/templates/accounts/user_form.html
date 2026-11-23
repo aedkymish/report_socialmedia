@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}تعديل {{ object.username }}{% else %}مستخدم جديد{% endif %}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:640px">
+  <h1>{% if object %}تعديل المستخدم <span class="ltr">{{ object.username }}</span>{% else %}مستخدم جديد{% endif %}</h1>
+  <p class="muted">الكود هو اسم المستخدم الذي يُدخل في النموذج وفي تسجيل الدخول.</p>
+  <form method="post" novalidate>{% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for f in form %}
+      {% if f.field.widget.input_type == "checkbox" %}
+        <div class="field"><label style="font-weight:400">{{ f }} {{ f.label }}</label>
+          {% if f.help_text %}<div class="muted">{{ f.help_text }}</div>{% endif %}{{ f.errors }}</div>
+      {% else %}
+        {% include "reports/_field.html" with f=f %}
+      {% endif %}
+    {% endfor %}
+    <button class="btn">حفظ</button>
+    <a class="btn secondary" href="{% url 'accounts:list' %}">إلغاء</a>
+  </form>
+</div>
+{% if history %}
+<div class="card">
+  <h2>سجل التغييرات على هذا المستخدم</h2>
+  {% include "accounts/_audit_table.html" with entries=history hide_object=True %}
+</div>
+{% endif %}
+{% endblock %}

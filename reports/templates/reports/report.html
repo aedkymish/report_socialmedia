@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}التقارير{% endblock %}
+{% block head %}
+<style>
+  .chips { display:flex; flex-wrap:wrap; gap:6px 14px; }
+  .chips label { cursor:pointer; white-space:nowrap; }
+  .report-filters { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px 20px; }
+  .report-filters fieldset { border:0; padding:0; margin:0; }
+  .report-filters legend { font-weight:600; margin-bottom:4px; }
+  .report-filters input[type=date] { padding:7px 8px; border:1px solid var(--line); border-radius:6px; font:inherit; }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+  .tile { border:1px solid var(--line); border-radius:8px; padding:12px 14px; background:#fff; }
+  .tile .num { font-size:1.8rem; font-weight:700; line-height:1.2; }
+  .tile .lbl { color:var(--muted); font-size:.9rem; }
+  .charts { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; }
+  .bar-row { display:grid; grid-template-columns:minmax(90px,auto) 1fr 3ch; align-items:center; gap:10px; padding:5px 0; }
+  .bar-row:hover { background:#f4f7f9; }
+  .bar-label { font-size:.92rem; }
+  .bar-track { height:14px; background:transparent; border-bottom:1px solid var(--line); display:block; }
+  .bar-fill { display:block; height:14px; background:var(--brand); border-radius:4px 0 0 4px; min-width:2px; }
+  .bar-value { font-weight:600; text-align:left; font-variant-numeric:tabular-nums; }
+  @media print { .report-filters, .report-actions { display:none !important; } .tile { break-inside:avoid; } }
+</style>
+{% endblock %}
+{% block content %}
+{% with f=result.filter %}
+<div class="card no-print">
+  <h1>التقارير</h1>
+  <form method="get">
+    <div class="report-filters">
+      <fieldset>
+        <legend>الفترة</legend>
+        <label>من <input type="date" name="from" value="{{ f.date_from|date:'Y-m-d' }}"></label>
+        <label>إلى <input type="date" name="to" value="{{ f.date_to|date:'Y-m-d' }}"></label>
+      </fieldset>
+      <fieldset>
+        <legend>المنصة <span class="muted">(بدون اختيار = الكل)</span></legend>
+        <div class="chips">{% for v, l in platforms %}
+          <label><input type="checkbox" name="platform" value="{{ v }}" {% if v in f.platforms %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
+      </fieldset>
+      <fieldset>
+        <legend>نوع الإجراء</legend>
+        <div class="chips">{% for v, l in actions %}
+          <label><input type="checkbox" name="action" value="{{ v }}" {% if v in f.actions %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
+      </fieldset>
+      <fieldset>
+        <legend>الحالة</legend>
+        <div class="chips">{% for v, l in statuses %}
+          <label><input type="checkbox" name="status" value="{{ v }}" {% if v in f.statuses %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
+      </fieldset>
+    </div>
+    <div class="report-actions" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn">عرض التقرير</button>
+      <a class="btn secondary" href="?{{ query }}&export=csv">تصدير Excel (CSV)</a>
+      <button type="button" class="btn secondary" onclick="window.print()">طباعة</button>
+      <a class="btn secondary" href="{% url 'reports:report' %}">إعادة تعيين</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="form-head">
+    <div class="muted">إدارة الشؤون الفنية — فريق الرصد والمتابعة الإلكترونية</div>
+    <h1>تقرير طلبات الإجراء</h1>
+    <div>من <b>{{ f.date_from|date:"Y/m/d" }}</b> إلى <b>{{ f.date_to|date:"Y/m/d" }}</b> ({{ f.days }} يوم)
+      {% if f.platforms %} — المنصات: {% for b in result.by_platform %}{{ b.label }}{% if not forloop.last %}، {% endif %}{% endfor %}{% endif %}
+      {% if f.actions %} — الإجراءات: {% for b in result.by_action %}{{ b.label }}{% if not forloop.last %}، {% endif %}{% endfor %}{% endif %}
+    </div>
+  </div>
+
+  <div class="tiles">
+    <div class="tile"><div class="num">{{ result.total }}</div><div class="lbl">عدد الطلبات</div></div>
+    <div class="tile"><div class="num">{{ result.links_total }}</div><div class="lbl">عدد الروابط</div></div>
+    <div class="tile"><div class="num">{{ result.videos }}</div><div class="lbl">فيديوهات محمّلة</div></div>
+    <div class="tile"><div class="num">{{ result.evidence_done }}</div><div class="lbl">أدلة مكتملة{% if result.evidence_failed %} · فشل {{ result.evidence_failed }}{% endif %}</div></div>
+    <div class="tile"><div class="num">{% if result.approval_rate is not None %}{{ result.approval_rate }}%{% else %}—{% endif %}</div><div class="lbl">نسبة الاعتماد من الطلبات المبتوت فيها</div></div>
+  </div>
+
+  <div class="charts" style="margin-top:18px">
+    <div><h2>الطلبات حسب المنصة</h2>{% include "reports/_bars.html" with bars=result.by_platform title="الطلبات حسب المنصة" %}</div>
+    <div><h2>الطلبات حسب نوع الإجراء</h2>{% include "reports/_bars.html" with bars=result.by_action title="الطلبات حسب نوع الإجراء" %}</div>
+    <div><h2>الطلبات حسب الحالة</h2>{% include "reports/_bars.html" with bars=result.by_status title="الطلبات حسب الحالة" %}</div>
+    <div><h2>الروابط حسب المنصة</h2>{% include "reports/_bars.html" with bars=result.links_by_platform title="الروابط حسب المنصة" %}</div>
+  </div>
+  <p class="muted" style="font-size:.85rem">الطلب الواحد قد يشمل أكثر من منصة أو إجراء، لذا قد يزيد مجموع الأعمدة عن عدد الطلبات.</p>
+</div>
+
+<div class="card">
+  <h2>تفاصيل الطلبات ({{ result.total }})</h2>
+  <div style="overflow-x:auto">
+  <table>
+    <tr><th>#</th><th>التاريخ</th><th>المنصات</th><th>الإجراء</th><th>الروابط</th><th>مسؤول الرصد</th><th>الحالة</th><th>المعتمد</th></tr>
+    {% for r in result.requests %}
+    <tr>
+      <td><a href="{{ r.get_absolute_url }}">{{ r.pk }}</a></td>
+      <td style="white-space:nowrap">{{ r.created_at|date:"Y/m/d H:i" }}</td>
+      <td>{{ r.platform_labels|join:"، " }}</td>
+      <td>{{ r.action_labels|join:"، " }}</td>
+      <td>{{ r.link_count }}</td>
+      <td class="ltr">{{ r.monitor.username }}</td>
+      <td><span class="badge b-{{ r.status }}">{{ r.get_status_display }}</span></td>
+      <td>{% if r.approved_by %}<span class="ltr">{{ r.approved_by.username }}</span> <span class="muted">{{ r.approved_at|date:"Y/m/d" }}</span>{% else %}—{% endif %}</td>
+    </tr>
+    {% empty %}<tr><td colspan="8" class="muted">لا توجد طلبات تطابق المعايير المختارة.</td></tr>{% endfor %}
+  </table>
+  </div>
+</div>
+{% endwith %}
+{% endblock %}

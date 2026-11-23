@@ -16,6 +16,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "auditlog",
     "accounts",
     "reports",
 ]
@@ -28,6 +29,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "auditlog.middleware.AuditlogMiddleware",  # records the acting user on every change
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -107,3 +109,6 @@ EVIDENCE = {
     # Max seconds to wait for a profile's content (e.g. TikTok video thumbnails) before the shot.
     "CONTENT_WAIT_SECONDS": int(os.environ.get("EVIDENCE_CONTENT_WAIT_SECONDS", "30")),
 }
+
+# django-auditlog: keep the remote IP of the actor with each entry.
+AUDITLOG_INCLUDE_ALL_MODELS = False

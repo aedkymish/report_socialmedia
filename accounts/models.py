@@ -28,3 +28,8 @@ class User(AbstractUser):
 
     def __str__(self) -> str:
         return f"{self.username} - {self.full_name}" if self.full_name else self.username
+
+
+from auditlog.registry import auditlog  # noqa: E402
+
+auditlog.register(User, exclude_fields=["password", "last_login"])

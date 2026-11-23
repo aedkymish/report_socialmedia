@@ -1,0 +1,5 @@
+{% if is_paginated %}<p class="pagination">
+  {% if page_obj.has_previous %}<a href="?{% if query %}{{ query }}&{% endif %}page={{ page_obj.previous_page_number }}">السابق</a>{% endif %}
+  صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+  {% if page_obj.has_next %}<a href="?{% if query %}{{ query }}&{% endif %}page={{ page_obj.next_page_number }}">التالي</a>{% endif %}
+</p>{% endif %}
