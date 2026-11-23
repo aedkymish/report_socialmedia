@@ -105,7 +105,7 @@ class WorkflowTests(TestCase):
         self.assertEqual(req.status, ActionRequest.Status.APPROVED)
         self.assertEqual(req.approved_by, self.boss)
         self.assertIsNotNone(req.approved_at)
-        self.assertContains(self.client.get(req.get_absolute_url()), "مدير")
+        self.assertContains(self.client.get(req.get_absolute_url()), "<b class=\"ltr\">A900</b>")  # signature shows the code only
 
 
 class SheetFallbackTests(TestCase):
@@ -292,3 +292,17 @@ class AuthorizedPersonsEditTests(TestCase):
         self.client.post(self.url, {"monitor": "M100", "uploader": "U200"})
         self.req.refresh_from_db()
         self.assertEqual(self.req.monitor, self.other)
+
+
+class SignatureLineTests(TestCase):
+    def test_signature_dots_then_code_only_after_approval(self):
+        boss = User.objects.create_user("001", password="x", role=User.Role.APPROVER, full_name="مكتب الأدلة الرقمية")
+        u = User.objects.create_user("M1", password="x")
+        req = ActionRequest.objects.create(description="d", monitor=u, uploader=u, created_by=u)
+        self.client.force_login(boss)
+        before = self.client.get(req.get_absolute_url()).content.decode()
+        self.assertIn('التوقيع الرسمي: <span class="signature-line">..............................</span><br>', before)
+        req.approve(boss)
+        after = self.client.get(req.get_absolute_url()).content.decode()
+        self.assertIn('<span class="signature-line">..............................</span>&nbsp;&nbsp;<b class="ltr">001</b><br>', after)
+        self.assertNotIn("(001)", after)

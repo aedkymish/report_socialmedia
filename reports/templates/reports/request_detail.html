@@ -54,7 +54,7 @@
   <p>{% if object.declaration_accepted %}☑{% else %}☐{% endif %} أقر أنا المسؤول المعتمد بصحة البيانات الواردة في هذا النموذج وبعد مراجعة كافة الشروط<br>
      {% if object.consent_accepted %}☑{% else %}☐{% endif %} أوافق على اتخاذ الإجراءات اللازمة عبر المنصة رسمياً</p>
   <p>✱ اسم المسؤول المعتمد: <b>{{ object.approver_name }}</b><br>
-     ✱ التوقيع الرسمي: {% if object.approved_by %}<b>{{ object.approved_by.full_name|default:object.approved_by.username }}</b> (<span class="ltr">{{ object.approved_by.username }}</span>){% else %}..............................{% endif %}<br>
+     ✱ التوقيع الرسمي: <span class="signature-line">..............................</span>{% if object.approved_by %}&nbsp;&nbsp;<b class="ltr">{{ object.approved_by.username }}</b>{% endif %}<br>
      ✱ التاريخ: {% if object.approved_at %}{{ object.approved_at|date:"Y/m/d" }} م{% else %}____/____/____{% endif %}</p>
   {% if object.review_note %}<p class="muted">ملاحظات: {{ object.review_note }}</p>{% endif %}
 
