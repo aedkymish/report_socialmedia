@@ -41,7 +41,7 @@ class RequestListView(LoginRequiredMixin, ListView):
         if q:
             qs = qs.filter(
                 Q(description__icontains=q) | Q(links__url__icontains=q)
-                | Q(monitor__username=q) | Q(uploader__username=q) | Q(platform_contact__username=q)
+                | Q(monitor__username=q) | Q(uploader__username=q) | Q(platform_contact_code=q)
             ).distinct()
         return qs
 
@@ -59,6 +59,7 @@ class RequestCreateView(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["users"] = get_user_model().objects.filter(is_active=True).order_by("username")
+        ctx["platform_contact_code"] = settings.PLATFORM_CONTACT_CODE
         return ctx
 
     def form_valid(self, form):
@@ -82,7 +83,7 @@ class RequestDetailView(LoginRequiredMixin, DetailView):
 
     def get_queryset(self):
         return ActionRequest.objects.select_related(
-            "monitor", "uploader", "platform_contact", "approved_by", "created_by",
+            "monitor", "uploader", "approved_by", "created_by",
         ).prefetch_related("links")
 
     def get_context_data(self, **kwargs):

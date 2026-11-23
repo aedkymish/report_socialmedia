@@ -46,7 +46,6 @@ class ActionRequestForm(forms.ModelForm):
     )
     monitor = UserCodeField(label="1. مسؤول الرصد - الكود")
     uploader = UserCodeField(label="2. المسؤول عن التحميل في القناة - الكود")
-    platform_contact = UserCodeField(label="3. مسؤول المنصة (نقطة الاتصال) - الكود")
     declaration_accepted = forms.BooleanField(
         label="أقر أنا المسؤول المعتمد بصحة البيانات الواردة في هذا النموذج وبعد مراجعة كافة الشروط",
     )
@@ -56,7 +55,7 @@ class ActionRequestForm(forms.ModelForm):
         model = ActionRequest
         fields = [
             "platforms", "actions", "description",
-            "monitor", "uploader", "platform_contact",
+            "monitor", "uploader",
             "declaration_accepted", "consent_accepted",
         ]
         labels = {"description": "رابعاً: شرح مبسط عن الحالة / سبب الطلب"}

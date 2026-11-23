@@ -44,7 +44,6 @@ class WorkflowTests(TestCase):
     def setUp(self):
         self.mon = User.objects.create_user("M100", password="x", role=User.Role.MONITOR)
         self.up = User.objects.create_user("U200", password="x", role=User.Role.UPLOADER)
-        self.pc = User.objects.create_user("P300", password="x", role=User.Role.PLATFORM_CONTACT)
         self.boss = User.objects.create_user("A900", password="x", role=User.Role.APPROVER, full_name="مدير")
         self.shots = FakeScreenshotter()
         factory = lambda: EvidenceCollector(downloader=FakeDownloader(), screenshotter=self.shots)
@@ -61,7 +60,7 @@ class WorkflowTests(TestCase):
             "platforms": ["tiktok", "x"], "actions": ["block", "document"],
             "links": "https://www.tiktok.com/@bad/video/99\nx.com/acc\n",
             "description": "محتوى مخالف", "monitor": "M100", "uploader": "U200",
-            "platform_contact": "P300", "declaration_accepted": "on", "consent_accepted": "on",
+            "declaration_accepted": "on", "consent_accepted": "on",
         }
         data.update(kw)
         return data
@@ -82,6 +81,7 @@ class WorkflowTests(TestCase):
         req = ActionRequest.objects.get()
         self.assertRedirects(resp, req.get_absolute_url())
         self.assertEqual(req.monitor, self.mon)
+        self.assertEqual(req.platform_contact_code, "003")
 
         video, profile = req.links.order_by("pk")
         self.assertTrue(video.is_video)
@@ -128,7 +128,7 @@ class SheetFallbackTests(TestCase):
         from reports.services.profile_videos import VideosSheetRenderer
         user = User.objects.create_user("Z1", password="x")
         req = ActionRequest.objects.create(description="d", monitor=user, uploader=user,
-                                           platform_contact=user, created_by=user)
+                                           created_by=user)
         link = RequestLink.objects.create(request=req, url="https://www.tiktok.com/@a")
         with self.settings(MEDIA_ROOT=TMP_MEDIA):
             collector = EvidenceCollector(downloader=FakeDownloader(), screenshotter=GridlessShots(),
@@ -149,7 +149,7 @@ class MultipleLinksFormTests(TestCase):
         from reports.forms import ActionRequestForm
         q = QueryDict(mutable=True)
         q.setlist("platforms", ["tiktok"]); q.setlist("actions", ["block"])
-        q.update({"description": "d", "monitor": "M1", "uploader": "M1", "platform_contact": "M1",
+        q.update({"description": "d", "monitor": "M1", "uploader": "M1",
                   "declaration_accepted": "on", "consent_accepted": "on"})
         q.setlist("links", links)
         return ActionRequestForm(q)
@@ -202,7 +202,7 @@ class VideosSheetModeTests(TestCase):
 
         user = User.objects.create_user(f"Z{mode}{grid_ready}", password="x")
         req = ActionRequest.objects.create(description="d", monitor=user, uploader=user,
-                                           platform_contact=user, created_by=user)
+                                           created_by=user)
         link = RequestLink.objects.create(request=req, url="https://www.tiktok.com/@a")
         evidence = {**settings.EVIDENCE, "VIDEOS_SHEET": mode}
         with self.settings(MEDIA_ROOT=TMP_MEDIA, EVIDENCE=evidence):
@@ -222,3 +222,19 @@ class VideosSheetModeTests(TestCase):
     def test_always_and_never(self):
         self.assertTrue(self._collect("always", grid_ready=True)[0].profile_videos_image)
         self.assertFalse(self._collect("never", grid_ready=False)[0].profile_videos_image)
+
+
+class PlatformContactCodeTests(TestCase):
+    def test_fixed_code_shown_readonly_and_not_overridable(self):
+        u = User.objects.create_user("M1", password="x")
+        self.client.force_login(u)
+        page = self.client.get(reverse("reports:create"))
+        self.assertContains(page, 'value="003"')
+        self.assertContains(page, "readonly")
+        with self.settings(PLATFORM_CONTACT_CODE="777"):
+            self.client.post(reverse("reports:create"), {
+                "platforms": ["tiktok"], "actions": ["block"], "links": "https://x.com/a",
+                "description": "d", "monitor": "M1", "uploader": "M1",
+                "platform_contact_code": "HACK", "declaration_accepted": "on", "consent_accepted": "on",
+            })
+        self.assertEqual(ActionRequest.objects.get().platform_contact_code, "777")

@@ -12,11 +12,12 @@ class RequestLinkInline(admin.TabularInline):
 
 @admin.register(ActionRequest)
 class ActionRequestAdmin(admin.ModelAdmin):
-    list_display = ("id", "status", "monitor", "uploader", "platform_contact", "created_at")
+    list_display = ("id", "status", "monitor", "uploader", "platform_contact_code", "created_at")
     list_filter = ("status", "created_at")
     search_fields = ("description", "links__url", "monitor__username")
     inlines = [RequestLinkInline]
-    raw_id_fields = ("monitor", "uploader", "platform_contact", "approved_by", "created_by")
+    raw_id_fields = ("monitor", "uploader", "approved_by", "created_by")
+    readonly_fields = ("platform_contact_code",)
 
 
 @admin.register(RequestLink)

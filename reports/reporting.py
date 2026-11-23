@@ -83,7 +83,7 @@ class ReportBuilder:
     def build(self, f: ReportFilter) -> ReportResult:
         qs = (
             ActionRequest.objects.filter(created_at__date__gte=f.date_from, created_at__date__lte=f.date_to)
-            .select_related("monitor", "uploader", "platform_contact", "approved_by")
+            .select_related("monitor", "uploader", "approved_by")
             .order_by("-created_at")
         )
         if f.statuses:
@@ -147,7 +147,7 @@ class ReportCsvExporter:
             w.writerow([
                 r.pk, timezone.localtime(r.created_at).strftime("%Y-%m-%d %H:%M"), r.get_status_display(),
                 "، ".join(r.platform_labels()), "، ".join(r.action_labels()), r.link_count,
-                r.monitor.username, r.uploader.username, r.platform_contact.username,
+                r.monitor.username, r.uploader.username, r.platform_contact_code,
                 r.approved_by.username if r.approved_by else "",
                 timezone.localtime(r.approved_at).strftime("%Y-%m-%d") if r.approved_at else "",
                 r.description.replace("\n", " "),

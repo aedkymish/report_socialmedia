@@ -116,6 +116,9 @@ EVIDENCE = {
 # django-auditlog: keep the remote IP of the actor with each entry.
 AUDITLOG_INCLUDE_ALL_MODELS = False
 
+# Fixed code of the external platform contact point (section 5, item 3 of the form).
+PLATFORM_CONTACT_CODE = os.environ.get("PLATFORM_CONTACT_CODE", "003").strip() or "003"
+
 # --- Report branding (PDF header) ---
 REPORT = {
     # Logo file shown in the PDF report header (PNG/JPG/SVG/WEBP). Relative paths

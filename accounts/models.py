@@ -8,7 +8,6 @@ class User(AbstractUser):
     class Role(models.TextChoices):
         MONITOR = "monitor", "مسؤول الرصد"
         UPLOADER = "uploader", "المسؤول عن التحميل في القناة"
-        PLATFORM_CONTACT = "platform_contact", "مسؤول المنصة (نقطة الاتصال)"
         APPROVER = "approver", "المسؤول المعتمد (مكتب الأدلة الرقمية)"
 
     full_name = models.CharField("الاسم الكامل", max_length=150, blank=True)

@@ -21,6 +21,10 @@ class ActionType(models.TextChoices):
     DOCUMENT = "document", "توثيق"
 
 
+def default_platform_contact_code() -> str:
+    return settings.PLATFORM_CONTACT_CODE
+
+
 class ActionRequest(models.Model):
     """نموذج طلب إجراء (حجب - قفل - حظر - توثيق) للصفحات والقنوات الرسمية."""
 
@@ -43,9 +47,11 @@ class ActionRequest(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="uploaded_requests",
         verbose_name="المسؤول عن التحميل في القناة",
     )
-    platform_contact = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="contact_requests",
-        verbose_name="مسؤول المنصة (نقطة الاتصال)",
+    # Fixed code of the external contact point (not a system user). Stored per
+    # request so old requests keep the code that was in force when submitted.
+    platform_contact_code = models.CharField(
+        "مسؤول المنصة (نقطة الاتصال) - الكود", max_length=32,
+        default=default_platform_contact_code, editable=False,
     )
     # سادساً: التوقيع والاعتماد
     declaration_accepted = models.BooleanField("إقرار بصحة البيانات", default=False)

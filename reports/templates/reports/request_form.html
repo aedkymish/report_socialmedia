@@ -25,7 +25,14 @@
   <div class="grid3">
     <div>{% include "reports/_field.html" with f=form.monitor %}<div class="muted">مسؤول عن الرصد والمتابعة الإلكترونية</div></div>
     <div>{% include "reports/_field.html" with f=form.uploader %}<div class="muted">مسؤول عن رفع الأدلة والبيانات</div></div>
-    <div>{% include "reports/_field.html" with f=form.platform_contact %}<div class="muted">الكود الثابت لنقطة الاتصال الخارجية</div></div>
+    <div>
+      <div class="field">
+        <label for="platform-contact-code">3. مسؤول المنصة (نقطة الاتصال) - الكود</label>
+        <input type="text" id="platform-contact-code" value="{{ platform_contact_code }}" dir="ltr" readonly
+               style="background:#eef2f5;cursor:not-allowed" aria-readonly="true">
+      </div>
+      <div class="muted">الكود الثابت لنقطة الاتصال الخارجية</div>
+    </div>
   </div>
   <datalist id="user-codes">
     {% for u in users %}<option value="{{ u.username }}">{{ u.full_name }} — {{ u.get_role_display }}</option>{% endfor %}

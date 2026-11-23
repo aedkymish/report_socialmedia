@@ -17,7 +17,7 @@ class ReportTests(TestCase):
 
         def make(platforms, actions, days_ago, status="submitted", links=()):
             r = ActionRequest.objects.create(platforms=platforms, actions=actions, description="d",
-                                             monitor=self.u, uploader=self.u, platform_contact=self.u,
+                                             monitor=self.u, uploader=self.u,
                                              created_by=self.u, status=status)
             ActionRequest.objects.filter(pk=r.pk).update(created_at=now - timedelta(days=days_ago))
             for p, vid in links:
@@ -74,7 +74,7 @@ class ReportPdfTests(TestCase):
     def test_pdf_export_embeds_arabic_font(self):
         u = User.objects.create_user("M1", password="x")
         ActionRequest.objects.create(platforms=["tiktok"], actions=["block"], description="d",
-                                     monitor=u, uploader=u, platform_contact=u, created_by=u)
+                                     monitor=u, uploader=u, created_by=u)
         self.client.force_login(u)
         resp = self.client.get(reverse("reports:report"), {"export": "pdf", "platform": "tiktok"})
         self.assertEqual(resp.status_code, 200)
