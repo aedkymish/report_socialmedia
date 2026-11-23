@@ -125,6 +125,11 @@ class RequestLink(models.Model):
     profile_url = models.URLField("رابط الصفحة الشخصية", max_length=1000, blank=True)
     profile_screenshot = models.ImageField("صورة الصفحة الشخصية", upload_to=evidence_path, blank=True, max_length=500)
     screenshot_sha256 = models.CharField("بصمة الصورة SHA-256", max_length=64, blank=True)
+    profile_videos_image = models.ImageField(
+        "قائمة فيديوهات الحساب (مستخرجة)", upload_to=evidence_path, blank=True, max_length=500,
+        help_text="تُنشأ عندما لا تعرض المنصة شبكة الفيديوهات في لقطة الشاشة.",
+    )
+    profile_videos_sha256 = models.CharField("بصمة قائمة الفيديوهات SHA-256", max_length=64, blank=True)
 
     evidence_status = models.CharField(
         "حالة الأدلة", max_length=16, choices=EvidenceStatus.choices, default=EvidenceStatus.PENDING,

@@ -106,3 +106,35 @@ class WorkflowTests(TestCase):
         self.assertEqual(req.approved_by, self.boss)
         self.assertIsNotNone(req.approved_at)
         self.assertContains(self.client.get(req.get_absolute_url()), "مدير")
+
+
+class SheetFallbackTests(TestCase):
+    """When the grid never renders, a separate, labelled videos sheet is produced."""
+
+    def test_sheet_created_when_grid_missing(self):
+        from reports.services.screenshotter import ScreenshotResult
+
+        class GridlessShots:
+            def capture(self, url, out):
+                from PIL import Image
+                Image.new("RGB", (1366, 900), "black").save(out)
+                return ScreenshotResult(out, ["grid missing"], content_ready=False)
+
+        class Lister:
+            def list(self, url):
+                return [{"id": "1", "url": "https://www.tiktok.com/@a/video/1", "title": "t",
+                         "thumbnail": "", "date": "2026-11-01", "views": 5}]
+
+        from reports.services.profile_videos import VideosSheetRenderer
+        user = User.objects.create_user("Z1", password="x")
+        req = ActionRequest.objects.create(description="d", monitor=user, uploader=user,
+                                           platform_contact=user, created_by=user)
+        link = RequestLink.objects.create(request=req, url="https://www.tiktok.com/@a")
+        with self.settings(MEDIA_ROOT=TMP_MEDIA):
+            collector = EvidenceCollector(downloader=FakeDownloader(), screenshotter=GridlessShots(),
+                                          video_lister=Lister(), sheet_renderer=VideosSheetRenderer())
+            link = collector.collect(link)
+        self.assertTrue(link.profile_screenshot)
+        self.assertTrue(link.profile_videos_image)
+        self.assertEqual(len(link.profile_videos_sha256), 64)
+        self.assertIn("قائمة فيديوهات الحساب (1 فيديو)", link.evidence_log)

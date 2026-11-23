@@ -79,6 +79,13 @@
         <div class="muted ltr" style="font-size:.75rem">SHA-256: {{ link.screenshot_sha256 }}</div>
       </div>
       {% endif %}
+      {% if link.profile_videos_image %}
+      <div>
+        <div class="muted">قائمة فيديوهات الحساب (مستخرجة آلياً)</div>
+        <a href="{{ link.profile_videos_image.url }}" target="_blank"><img src="{{ link.profile_videos_image.url }}" alt="قائمة فيديوهات الحساب"></a>
+        <div class="muted ltr" style="font-size:.75rem">SHA-256: {{ link.profile_videos_sha256 }}</div>
+      </div>
+      {% endif %}
     </div>
     {% if link.evidence_log %}<details class="no-print"><summary class="muted">سجل المعالجة</summary><pre class="log">{{ link.evidence_log }}</pre></details>{% endif %}
     {% if link.evidence_status == "failed" or link.evidence_status == "partial" %}

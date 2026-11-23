@@ -21,6 +21,8 @@ from .cookies import CookieFile
 class ScreenshotResult:
     path: Path
     notes: list[str] = field(default_factory=list)
+    content_ready: bool = True   # False when the platform never rendered the post grid
+    logged_out: bool = False
 
 
 class PageCleaner:
@@ -45,6 +47,8 @@ class PageCleaner:
     def looks_logged_out(self, page) -> bool:
         return self._visible(page, self.LOGIN_BUTTON_SELECTORS)
 
+    content_ready: bool = True
+
     def clean(self, page) -> list[str]:
         notes = []
         had_captcha = self._visible(page, self.CAPTCHA_SELECTORS)
@@ -67,6 +71,7 @@ class PageCleaner:
             page.wait_for_timeout(1500)
         if retry_notes:
             ready = self._wait_until_ready(page)
+        self.content_ready = ready
         if not ready:
             notes.append(self.NOT_READY_NOTE)
 
@@ -258,7 +263,9 @@ class ProfileScreenshotter:
             page.wait_for_timeout(2000)
             cleaner = cleaner_for(page.url)
             notes = self._cookie_notes(page.url) + cleaner.clean(page)
-            if cleaner.looks_logged_out(page):
-                notes.append("المتصفح غير مسجّل الدخول في المنصة (زر تسجيل الدخول ظاهر).")
+            logged_out = cleaner.looks_logged_out(page)
+            if logged_out:
+                notes.append("المتصفح غير مسجّل الدخول في المنصة (زر تسجيل الدخول ظاهر) رغم ملف cookies؛ "
+                             "شغّل: python manage.py debug_profile <الرابط> لمعرفة السبب.")
             page.screenshot(path=str(out_file), full_page=False)
-        return ScreenshotResult(out_file, notes)
+        return ScreenshotResult(out_file, notes, cleaner.content_ready, logged_out)

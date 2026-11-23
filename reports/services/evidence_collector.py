@@ -19,6 +19,7 @@ from django.utils import timezone
 from ..models import ActionRequest, RequestLink
 from .link_analyzer import LinkAnalyzer
 from .screenshotter import ProfileScreenshotter
+from .profile_videos import ProfileVideoLister, VideosSheetRenderer
 from .video_downloader import VideoDownloader
 
 logger = logging.getLogger(__name__)
@@ -33,8 +34,13 @@ def sha256_of(path: Path) -> str:
 
 
 class EvidenceCollector:
-    def __init__(self, analyzer=None, downloader=None, screenshotter=None):
+    def __init__(self, analyzer=None, downloader=None, screenshotter=None,
+                 video_lister=None, sheet_renderer=None):
         cfg = settings.EVIDENCE
+        self.video_lister = video_lister or ProfileVideoLister(cfg["COOKIES_FILE"])
+        self.sheet_renderer = sheet_renderer or VideosSheetRenderer(
+            cfg["CHROMIUM_EXECUTABLE"], cfg["COOKIES_FILE"],
+        )
         self.analyzer = analyzer or LinkAnalyzer()
         self.downloader = downloader or VideoDownloader(
             cfg["COOKIES_FILE"], cfg["MAX_VIDEO_MB"],
@@ -125,7 +131,34 @@ class EvidenceCollector:
             link.profile_screenshot.save(f"profile_{stamp}.png", File(fh), save=False)
         log.append(f"تم تصوير الصفحة الشخصية: {url} SHA-256={link.screenshot_sha256}")
         log.extend(getattr(result, "notes", []))
+        if not getattr(result, "content_ready", True):
+            self._collect_videos_sheet(link, url, out, log)
         return True
+
+    def _collect_videos_sheet(self, link: RequestLink, profile_url: str, screenshot: Path, log: list[str]) -> None:
+        """Fallback when the platform hid the video grid from the screenshot."""
+        try:
+            videos = self.video_lister.list(profile_url)
+        except Exception as exc:
+            logger.warning("video listing failed for %s: %s", profile_url, exc)
+            log.append(f"تعذر استخراج قائمة فيديوهات الحساب: {VideoDownloader._short(exc)}")
+            return
+        if not videos:
+            log.append("لم تُرجع المنصة أي فيديو في قائمة الحساب.")
+            return
+        sheet = screenshot.with_name("profile_videos.png")
+        try:
+            self.sheet_renderer.render(screenshot, profile_url, videos, sheet)
+        except Exception as exc:
+            logger.exception("sheet render failed")
+            log.append(f"تعذر إنشاء صورة قائمة الفيديوهات: {exc}")
+            return
+        link.profile_videos_sha256 = sha256_of(sheet)
+        stamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+        with open(sheet, "rb") as fh:
+            link.profile_videos_image.save(f"profile_videos_{stamp}.png", File(fh), save=False)
+        log.append(f"تم إنشاء صورة قائمة فيديوهات الحساب ({len(videos)} فيديو) "
+                   f"SHA-256={link.profile_videos_sha256}")
 
 
 class EvidenceDispatcher:
