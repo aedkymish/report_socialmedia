@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlparse
 
-from .browser import BrowserLauncher
+from .browser import SESSION_COOKIES, BrowserLauncher, has_session_cookie, load_netscape_cookies
 
 
 @dataclass
@@ -34,6 +34,10 @@ class PageCleaner:
         'iframe[src*="captcha"]', '[id*="captcha" i]', '[class*="captcha" i]',
     ]
     CONTENT_SELECTOR: str | None = None
+    LOGIN_BUTTON_SELECTORS: list[str] = []
+
+    def looks_logged_out(self, page) -> bool:
+        return self._visible(page, self.LOGIN_BUTTON_SELECTORS)
 
     def clean(self, page) -> list[str]:
         notes = []
@@ -48,6 +52,11 @@ class PageCleaner:
             pass
         self._wait_for_content(page)
         notes.extend(self._retry_failed_content(page))
+        # Pressing "Refresh" can trigger a new verification dialog: close it again.
+        for _ in range(2):
+            if not self._click_first(page, self.CLOSE_SELECTORS):
+                break
+            page.wait_for_timeout(1500)
 
         if self._visible(page, self.CAPTCHA_SELECTORS):
             notes.append(
@@ -133,6 +142,8 @@ class TikTokCleaner(PageCleaner):
         *PageCleaner.CLOSE_SELECTORS,
     ]
     CONTENT_SELECTOR = '[data-e2e="user-post-item"] img, [data-e2e="user-title"]'
+    LOGIN_BUTTON_SELECTORS = ['[data-e2e="nav-login-button"]', '[data-e2e="top-login-button"]',
+                              'button:has-text("تسجيل الدخول")', 'button:has-text("Log in")']
     RETRY_BUTTON = re.compile(r"^\s*(تحديث|Refresh|Retry|Try again)\s*$", re.I)
     RETRY_SUCCESS_SELECTOR = '[data-e2e="user-post-item"]'
     RETRY_FAILED_NOTE = (
@@ -183,7 +194,23 @@ class ProfileScreenshotter:
 
     def __init__(self, executable_path: str = "", timeout_ms: int = 45000, cookies_file: str = ""):
         self.launcher = BrowserLauncher(executable_path, cookies_file)
+        self.cookies_file = cookies_file
         self.timeout_ms = timeout_ms
+
+    def _cookie_notes(self, url: str) -> list[str]:
+        host = (urlparse(url).hostname or "").lower()
+        site = next((d for d in SESSION_COOKIES if host == d or host.endswith("." + d)), None)
+        if not site:
+            return []
+        if not self.cookies_file:
+            return [f"لم يُضبط ملف cookies؛ المتصفح يزور {site} كزائر غير مسجّل."]
+        cookies = load_netscape_cookies(self.cookies_file)
+        if not cookies:
+            return [f"ملف cookies ({self.cookies_file}) غير موجود أو فارغ أو بصيغة غير صحيحة."]
+        if has_session_cookie(cookies, site) is False:
+            return [f"ملف cookies لا يحتوي جلسة دخول لـ {site} (الكوكي {SESSION_COOKIES[site]} مفقود). "
+                    "صدّره مرة أخرى وأنت مسجّل الدخول وعلى صفحة الموقع نفسه."]
+        return []
 
     def capture(self, url: str, out_file: Path) -> ScreenshotResult:
         out_file.parent.mkdir(parents=True, exist_ok=True)
@@ -195,6 +222,9 @@ class ProfileScreenshotter:
             except Exception:
                 pass  # social sites keep long-polling; a loaded DOM is enough
             page.wait_for_timeout(2000)
-            notes = cleaner_for(page.url).clean(page)
+            cleaner = cleaner_for(page.url)
+            notes = self._cookie_notes(page.url) + cleaner.clean(page)
+            if cleaner.looks_logged_out(page):
+                notes.append("المتصفح غير مسجّل الدخول في المنصة (زر تسجيل الدخول ظاهر).")
             page.screenshot(path=str(out_file), full_page=False)
         return ScreenshotResult(out_file, notes)

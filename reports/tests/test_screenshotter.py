@@ -117,3 +117,36 @@ class LiveRetryTests(SimpleTestCase):
             page = ctx.new_page()
             page.set_content('<div data-e2e="user-post-item">ok</div>')
             self.assertEqual(TikTokCleaner()._retry_failed_content(page), [])
+
+
+class SessionCookieTests(SimpleTestCase):
+    def _file(self, text):
+        fh = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False)
+        fh.write(text)
+        fh.close()
+        self.addCleanup(Path(fh.name).unlink)
+        return fh.name
+
+    def test_logged_out_export_is_detected(self):
+        from reports.services.screenshotter import ProfileScreenshotter
+        f = self._file(".tiktok.com\tTRUE\t/\tTRUE\t1999999999\ttt_csrf_token\tx\n"
+                       ".tiktok.com\tTRUE\t/\tTRUE\t1999999999\tttwid\ty\n")
+        notes = ProfileScreenshotter(cookies_file=f)._cookie_notes("https://www.tiktok.com/@a")
+        self.assertTrue(notes and "sessionid" in notes[0], notes)
+
+    def test_logged_in_export_passes(self):
+        from reports.services.screenshotter import ProfileScreenshotter
+        f = self._file(".tiktok.com\tTRUE\t/\tTRUE\t1999999999\tsessionid\tabc\n")
+        self.assertEqual(ProfileScreenshotter(cookies_file=f)._cookie_notes("https://www.tiktok.com/@a"), [])
+
+    def test_check_cookies_command(self):
+        import io
+        from django.core.management import call_command
+        f = self._file(".tiktok.com\tTRUE\t/\tTRUE\t1999999999\tttwid\tSECRETVALUE\n"
+                       ".instagram.com\tTRUE\t/\tTRUE\t1999999999\tsessionid\tSECRET2\n")
+        out = io.StringIO()
+        call_command("check_cookies", file=f, stdout=out)
+        text = out.getvalue()
+        self.assertIn("✗ tiktok.com", text)
+        self.assertIn("✓ instagram.com", text)
+        self.assertNotIn("SECRET", text)  # values are never printed

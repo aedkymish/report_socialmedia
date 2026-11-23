@@ -43,6 +43,29 @@ def load_netscape_cookies(path: str) -> list[dict]:
     return cookies
 
 
+# Cookie that proves a logged-in session, per platform.
+SESSION_COOKIES = {
+    "tiktok.com": "sessionid",
+    "instagram.com": "sessionid",
+    "facebook.com": "c_user",
+    "x.com": "auth_token",
+    "twitter.com": "auth_token",
+}
+
+
+def cookie_domain_matches(cookie_domain: str, site: str) -> bool:
+    d = cookie_domain.lstrip(".").lower()
+    return d == site or d.endswith("." + site)
+
+
+def has_session_cookie(cookies: list[dict], site: str) -> bool | None:
+    """True/False for known platforms, None when we don't know which cookie to expect."""
+    name = SESSION_COOKIES.get(site)
+    if not name:
+        return None
+    return any(c["name"] == name and c["value"] and cookie_domain_matches(c["domain"], site) for c in cookies)
+
+
 class BrowserLauncher:
     FALLBACK_EXECUTABLE = Path("/opt/pw-browsers/chromium")
 
