@@ -36,6 +36,11 @@ class PageCleaner:
     ]
     CONTENT_SELECTOR: str | None = None
     LOGIN_BUTTON_SELECTORS: list[str] = []
+    # JS predicate returning true once the page has *really* rendered (not just
+    # its skeleton placeholders). None = only wait for CONTENT_SELECTOR.
+    READY_JS: str | None = None
+    READY_TIMEOUT_MS = 25000
+    NOT_READY_NOTE = "تنبيه: انتهت مهلة انتظار تحميل محتوى الصفحة؛ قد تظهر أجزاء غير مكتملة في الصورة."
 
     def looks_logged_out(self, page) -> bool:
         return self._visible(page, self.LOGIN_BUTTON_SELECTORS)
@@ -52,12 +57,18 @@ class PageCleaner:
         except Exception:
             pass
         self._wait_for_content(page)
-        notes.extend(self._retry_failed_content(page))
+        ready = self._wait_until_ready(page)
+        retry_notes = self._retry_failed_content(page)
+        notes.extend(retry_notes)
         # Pressing "Refresh" can trigger a new verification dialog: close it again.
         for _ in range(2):
             if not self._click_first(page, self.CLOSE_SELECTORS):
                 break
             page.wait_for_timeout(1500)
+        if retry_notes:
+            ready = self._wait_until_ready(page)
+        if not ready:
+            notes.append(self.NOT_READY_NOTE)
 
         if self._visible(page, self.CAPTCHA_SELECTORS):
             notes.append(
@@ -97,6 +108,16 @@ class PageCleaner:
         if retried:
             return [self.RETRY_FAILED_NOTE]
         return []
+
+    def _wait_until_ready(self, page) -> bool:
+        if not self.READY_JS:
+            return True
+        try:
+            page.wait_for_function(self.READY_JS, timeout=self.READY_TIMEOUT_MS, polling=500)
+        except Exception:
+            return False
+        page.wait_for_timeout(1000)  # let the last thumbnails paint
+        return True
 
     def _wait_for_content(self, page) -> None:
         if self.CONTENT_SELECTOR:
@@ -142,7 +163,18 @@ class TikTokCleaner(PageCleaner):
         '[data-e2e="modal-close-button"]',
         *PageCleaner.CLOSE_SELECTORS,
     ]
-    CONTENT_SELECTOR = '[data-e2e="user-post-item"] img, [data-e2e="user-title"]'
+    CONTENT_SELECTOR = '[data-e2e="user-title"]'
+    # Ready when the video thumbnails have actually loaded, or the page settled
+    # into a definite state (no videos / private / error -> handled by retry).
+    READY_JS = r"""() => {
+        const imgs = [...document.querySelectorAll('[data-e2e="user-post-item"] img')];
+        const loaded = imgs.filter(i => i.complete && i.naturalWidth > 0).length;
+        if (imgs.length && loaded >= Math.min(6, imgs.length)) return true;
+        const t = document.body ? document.body.innerText : "";
+        return /لا يوجد محتوى|لا توجد مقاطع|No content|This account is private|هذا الحساب خاص|حساب خاص|حدث خطأ ما|Something went wrong/i.test(t);
+    }"""
+    NOT_READY_NOTE = ("تنبيه: لم تكتمل صور الفيديوهات في صفحة تيك توك خلال المهلة؛ "
+                      "بيانات الحساب ظاهرة لكن قد تظهر مربعات فارغة مكان الفيديوهات.")
     LOGIN_BUTTON_SELECTORS = ['[data-e2e="nav-login-button"]', '[data-e2e="top-login-button"]',
                               'button:has-text("تسجيل الدخول")', 'button:has-text("Log in")']
     RETRY_BUTTON = re.compile(r"^\s*(تحديث|Refresh|Retry|Try again)\s*$", re.I)

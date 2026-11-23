@@ -11,7 +11,7 @@ from reports.services.screenshotter import (
 PROFILE = """
 <html><body style="background:#000;color:#fff">
 <h1 data-e2e="user-title">tk_test</h1>
-<div data-e2e="user-post-item"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" width=100 height=100></div>
+<div data-e2e="user-post-item"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACwAAAAAAQABAAACAkQBADs=" width=100 height=100></div>
 <div id="captcha-verify-container-main-page" style="position:fixed;inset:0;background:rgba(0,0,0,.7)">
   <div>Drag the slider to fit the puzzle</div>
   {close}
@@ -200,3 +200,39 @@ class CookieFormatTests(SimpleTestCase):
         call_command("check_cookies", file=f, stdout=out)
         self.assertIn("أدوات المطوّر", out.getvalue())
         self.assertNotIn("SECRET", out.getvalue())
+
+
+SLOW_GRID = """
+<html><body>
+<h1 data-e2e="user-title">tk_test</h1>
+<div id="grid"><div class="skeleton">loading</div></div>
+<script>
+  setTimeout(() => {
+    const gif = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACwAAAAAAQABAAACAkQBADs=";
+    document.getElementById('grid').innerHTML =
+      [1,2,3].map(i => '<div data-e2e="user-post-item"><img src="' + gif + '"></div>').join('');
+  }, {delay});
+</script>
+</body></html>
+"""
+
+
+class LiveReadinessTests(SimpleTestCase):
+    def _clean(self, delay, timeout_ms=25000):
+        cleaner = TikTokCleaner()
+        cleaner.READY_TIMEOUT_MS = timeout_ms
+        with BrowserLauncher().context({"width": 800, "height": 600}) as ctx:
+            page = ctx.new_page()
+            page.set_content(SLOW_GRID.replace("{delay}", str(delay)))
+            notes = cleaner.clean(page)
+            return notes, page.locator('[data-e2e="user-post-item"] img').count()
+
+    def test_waits_for_thumbnails_not_just_header(self):
+        notes, imgs = self._clean(delay=4000)
+        self.assertEqual(imgs, 3)
+        self.assertFalse(any("لم تكتمل" in n for n in notes), notes)
+
+    def test_reports_when_grid_never_loads(self):
+        notes, imgs = self._clean(delay=999999, timeout_ms=3000)
+        self.assertEqual(imgs, 0)
+        self.assertTrue(any("لم تكتمل" in n for n in notes), notes)
