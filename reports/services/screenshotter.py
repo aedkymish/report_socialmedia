@@ -73,7 +73,7 @@ class PageCleaner:
             ready = self._wait_until_ready(page)
         self.content_ready = ready
         if not ready:
-            notes.append(self.NOT_READY_NOTE)
+            notes.append(self.refused_reason() or self.NOT_READY_NOTE)
 
         if self._visible(page, self.CAPTCHA_SELECTORS):
             notes.append(
@@ -114,15 +114,46 @@ class PageCleaner:
             return [self.RETRY_FAILED_NOTE]
         return []
 
+    def observe(self, page) -> None:
+        """Called before navigation, to watch the platform's own network traffic."""
+
+    def refused_reason(self) -> str:
+        """Non-empty when the platform definitively refused the content (stop waiting)."""
+        return ""
+
+    def _is_ready(self, page) -> bool:
+        try:
+            return bool(page.evaluate(self.READY_JS))
+        except Exception:
+            return False
+
     def _wait_until_ready(self, page) -> bool:
         if not self.READY_JS:
             return True
+        waited, step, refused_for = 0, 500, 0
+        while waited < self.READY_TIMEOUT_MS:
+            if self._is_ready(page):
+                page.wait_for_timeout(1000)  # let the last thumbnails paint
+                return True
+            if self.refused_reason():
+                refused_for += step
+                if refused_for >= 5000:  # grace period: the site may retry by itself
+                    return False
+            if waited == 3000:
+                self._nudge_lazy_loading(page)
+            page.wait_for_timeout(step)
+            waited += step
+        return self._is_ready(page)
+
+    @staticmethod
+    def _nudge_lazy_loading(page) -> None:
+        """Scroll a little and back so lazily-loaded thumbnails start loading."""
         try:
-            page.wait_for_function(self.READY_JS, timeout=self.READY_TIMEOUT_MS, polling=500)
+            page.mouse.wheel(0, 600)
+            page.wait_for_timeout(700)
+            page.mouse.wheel(0, -600)
         except Exception:
-            return False
-        page.wait_for_timeout(1000)  # let the last thumbnails paint
-        return True
+            pass
 
     def _wait_for_content(self, page) -> None:
         if self.CONTENT_SELECTOR:
@@ -190,6 +221,31 @@ class TikTokCleaner(PageCleaner):
     )
 
 
+    ITEM_LIST_PATH = "/api/post/item_list"
+
+    def __init__(self):
+        self._item_list_responses = []
+
+    def observe(self, page) -> None:
+        # Only store the response objects here; bodies are read later from the
+        # polling loop (blocking calls inside event handlers are unsafe).
+        page.on("response", lambda r: self.ITEM_LIST_PATH in r.url and self._item_list_responses.append(r))
+
+    def refused_reason(self) -> str:
+        if not self._item_list_responses:
+            return ""
+        for resp in self._item_list_responses:
+            try:
+                body = resp.body()
+            except Exception:
+                continue
+            if resp.status == 200 and len(body) > 2:
+                return ""  # at least one real answer: keep waiting for thumbnails
+        return ("تيك توك رفض إرسال قائمة الفيديوهات لهذا المتصفح (رد فارغ على طلب item_list) — "
+                "الانتظار لا يغيّر النتيجة. السبب: المتصفح غير مسجّل الدخول (أضف cookies بجلسة دخول صالحة). "
+                "تم إنشاء صورة قائمة الفيديوهات بديلاً.")
+
+
 class InstagramCleaner(PageCleaner):
     CLOSE_SELECTORS = [
         'div[role="dialog"] svg[aria-label="Close"]',
@@ -230,10 +286,12 @@ def cleaner_for(url: str) -> PageCleaner:
 class ProfileScreenshotter:
     VIEWPORT = {"width": 1366, "height": 1600}
 
-    def __init__(self, executable_path: str = "", timeout_ms: int = 45000, cookies_file: str = ""):
+    def __init__(self, executable_path: str = "", timeout_ms: int = 45000, cookies_file: str = "",
+                 content_wait_seconds: int = 30):
         self.launcher = BrowserLauncher(executable_path, cookies_file)
         self.cookies_file = cookies_file
         self.timeout_ms = timeout_ms
+        self.content_wait_ms = max(5, content_wait_seconds) * 1000
 
     def _cookie_notes(self, url: str) -> list[str]:
         host = (urlparse(url).hostname or "").lower()
@@ -255,13 +313,15 @@ class ProfileScreenshotter:
         out_file.parent.mkdir(parents=True, exist_ok=True)
         with self.launcher.context(self.VIEWPORT) as ctx:
             page = ctx.new_page()
+            cleaner = cleaner_for(url)
+            cleaner.READY_TIMEOUT_MS = self.content_wait_ms
+            cleaner.observe(page)
             page.goto(url, wait_until="domcontentloaded", timeout=self.timeout_ms)
             try:
                 page.wait_for_load_state("networkidle", timeout=10000)
             except Exception:
                 pass  # social sites keep long-polling; a loaded DOM is enough
             page.wait_for_timeout(2000)
-            cleaner = cleaner_for(page.url)
             notes = self._cookie_notes(page.url) + cleaner.clean(page)
             logged_out = cleaner.looks_logged_out(page)
             if logged_out:

@@ -49,6 +49,7 @@ class EvidenceCollector:
         )
         self.screenshotter = screenshotter or ProfileScreenshotter(
             cfg["CHROMIUM_EXECUTABLE"], cfg["SCREENSHOT_TIMEOUT_MS"], cfg["COOKIES_FILE"],
+            cfg["CONTENT_WAIT_SECONDS"],
         )
 
     def collect_request(self, action_request: ActionRequest) -> None:

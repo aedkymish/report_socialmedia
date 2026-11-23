@@ -26,7 +26,8 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("url")
-        parser.add_argument("--wait", type=int, default=25, help="ثواني الانتظار بعد فتح الصفحة")
+        parser.add_argument("--wait", type=int, default=settings.EVIDENCE["CONTENT_WAIT_SECONDS"],
+                            help="ثواني الانتظار بعد فتح الصفحة")
         parser.add_argument("--skip-ytdlp", action="store_true")
 
     def ok(self, msg):

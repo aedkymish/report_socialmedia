@@ -102,4 +102,6 @@ EVIDENCE = {
     "COOKIES_FILE": os.environ.get("YTDLP_COOKIES_FILE", ""),
     "MAX_VIDEO_MB": int(os.environ.get("EVIDENCE_MAX_VIDEO_MB", "500")),
     "SCREENSHOT_TIMEOUT_MS": int(os.environ.get("EVIDENCE_SCREENSHOT_TIMEOUT_MS", "45000")),
+    # Max seconds to wait for a profile's content (e.g. TikTok video thumbnails) before the shot.
+    "CONTENT_WAIT_SECONDS": int(os.environ.get("EVIDENCE_CONTENT_WAIT_SECONDS", "30")),
 }

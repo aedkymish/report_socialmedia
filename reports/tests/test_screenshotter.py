@@ -272,3 +272,62 @@ class SidGuardExpiryTests(SimpleTestCase):
         call_command("check_cookies", file=fh.name, stdout=out)
         self.assertIn("انتهت بتاريخ 2026-07-25", out.getvalue())
         self.assertNotIn("deadbeef", out.getvalue())
+
+
+class LiveItemListTests(SimpleTestCase):
+    """Real Chromium + local HTTP server imitating TikTok's item_list API."""
+
+    @classmethod
+    def setUpClass(cls):
+        import functools, http.server, threading
+        super().setUpClass()
+        cls.site = Path(tempfile.mkdtemp())
+        gif = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACwAAAAAAQABAAACAkQBADs="
+        page = """<html><body><h1 data-e2e="user-title">tk</h1><div id="grid"></div><script>
+          fetch('api/post/item_list/').then(r => r.text()).then(t => {
+            if (!t) return;  // TikTok's silent refusal: grid stays as skeleton
+            setTimeout(() => { document.getElementById('grid').innerHTML =
+              '<div data-e2e="user-post-item"><img src="GIF"></div>'; }, 6000);
+          });</script></body></html>""".replace("GIF", gif)
+        for name, body in (("refused", ""), ("ok", '{"statusCode":0,"itemList":[1]}')):
+            d = cls.site / name / "api" / "post" / "item_list"
+            d.mkdir(parents=True)
+            (d / "index.html").write_text(body)
+            (cls.site / name / "page.html").write_text(page)
+        handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(cls.site))
+        handler.log_message = lambda *a: None
+        cls.httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        cls.base = f"http://127.0.0.1:{cls.httpd.server_port}"
+        threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
+
+    @classmethod
+    def tearDownClass(cls):
+        import shutil
+        cls.httpd.shutdown()
+        shutil.rmtree(cls.site, ignore_errors=True)
+        super().tearDownClass()
+
+    def _run(self, name):
+        import time
+        cleaner = TikTokCleaner()
+        cleaner.READY_TIMEOUT_MS = 30000
+        with BrowserLauncher().context({"width": 800, "height": 600}) as ctx:
+            page = ctx.new_page()
+            cleaner.observe(page)
+            page.goto(f"{self.base}/{name}/page.html")
+            start = time.monotonic()
+            notes = cleaner.clean(page)
+            return notes, cleaner.content_ready, time.monotonic() - start, \
+                page.locator('[data-e2e="user-post-item"] img').count()
+
+    def test_waits_for_late_grid_when_list_arrives(self):
+        notes, ready, _, imgs = self._run("ok")
+        self.assertTrue(ready, notes)
+        self.assertEqual(imgs, 1)
+
+    def test_empty_item_list_stops_early_with_reason(self):
+        notes, ready, elapsed, imgs = self._run("refused")
+        self.assertFalse(ready)
+        self.assertEqual(imgs, 0)
+        self.assertLess(elapsed, 20)  # did not burn the full 30s timeout
+        self.assertTrue(any("رد فارغ على طلب item_list" in n for n in notes), notes)
