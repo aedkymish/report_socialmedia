@@ -39,9 +39,10 @@ class EvidenceCollector:
         self.downloader = downloader or VideoDownloader(
             cfg["COOKIES_FILE"], cfg["MAX_VIDEO_MB"],
             chromium_executable=cfg["CHROMIUM_EXECUTABLE"], timeout_ms=cfg["SCREENSHOT_TIMEOUT_MS"],
+            browser_cookies_file=cfg["COOKIES_FILE"],
         )
         self.screenshotter = screenshotter or ProfileScreenshotter(
-            cfg["CHROMIUM_EXECUTABLE"], cfg["SCREENSHOT_TIMEOUT_MS"],
+            cfg["CHROMIUM_EXECUTABLE"], cfg["SCREENSHOT_TIMEOUT_MS"], cfg["COOKIES_FILE"],
         )
 
     def collect_request(self, action_request: ActionRequest) -> None:
@@ -113,7 +114,7 @@ class EvidenceCollector:
 
     def _collect_screenshot(self, link: RequestLink, url: str, out: Path, log: list[str]) -> bool:
         try:
-            self.screenshotter.capture(url, out)
+            result = self.screenshotter.capture(url, out)
         except Exception as exc:
             logger.exception("screenshot failed for %s", url)
             log.append(f"فشل تصوير الصفحة الشخصية ({url}): {exc}")
@@ -123,6 +124,7 @@ class EvidenceCollector:
         with open(out, "rb") as fh:
             link.profile_screenshot.save(f"profile_{stamp}.png", File(fh), save=False)
         log.append(f"تم تصوير الصفحة الشخصية: {url} SHA-256={link.screenshot_sha256}")
+        log.extend(getattr(result, "notes", []))
         return True
 
 

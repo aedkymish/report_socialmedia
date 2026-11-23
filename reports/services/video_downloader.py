@@ -160,8 +160,9 @@ class BrowserVideoCapture(VideoStrategy):
     name = "browser"
     VIEWPORT = {"width": 1280, "height": 900}
 
-    def __init__(self, executable_path: str = "", max_mb: int = 500, timeout_ms: int = 45000):
-        self.launcher = BrowserLauncher(executable_path)
+    def __init__(self, executable_path: str = "", max_mb: int = 500, timeout_ms: int = 45000,
+                 cookies_file: str = ""):
+        self.launcher = BrowserLauncher(executable_path, cookies_file)
         self.max_bytes = max_mb * 1024 * 1024
         self.timeout_ms = timeout_ms
 
@@ -290,10 +291,10 @@ class VideoDownloader:
     """Tries each strategy in order; the first one that yields a file wins."""
 
     def __init__(self, cookies_file: str = "", max_mb: int = 500, strategies=None,
-                 chromium_executable: str = "", timeout_ms: int = 45000):
+                 chromium_executable: str = "", timeout_ms: int = 45000, browser_cookies_file: str = ""):
         self.strategies: list[VideoStrategy] = strategies or [
             YtDlpStrategy(cookies_file, max_mb),
-            BrowserVideoCapture(chromium_executable, max_mb, timeout_ms),
+            BrowserVideoCapture(chromium_executable, max_mb, timeout_ms, browser_cookies_file or cookies_file),
         ]
 
     def download(self, url: str, dest_dir: Path) -> VideoResult:

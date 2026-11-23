@@ -29,7 +29,7 @@ docker compose up -d --build
 ثم افتح http://localhost:8000 وادخل بالكود `DJANGO_SUPERUSER_USERNAME` الموجود في `.env`.
 - قاعدة البيانات والفيديوهات والصور تُحفظ في الـ volume `app_data` (`/app/data` داخل الحاوية).
 - الصورة مبنية على صورة Playwright الرسمية (فيها Chromium) ومعها ffmpeg.
-- للمنصات التي تطلب تسجيل دخول: ضع `cookies.txt` وفعّل السطر الخاص به في `docker-compose.yml` و `YTDLP_COOKIES_FILE` في `.env`.
+- للمنصات التي تطلب تسجيل دخول أو تُظهر تحقق CAPTCHA: ضع `cookies.txt` (يُستخدم لتحميل الفيديو **ولتصوير الصفحة الشخصية**) وفعّل السطر الخاص به في `docker-compose.yml` و `YTDLP_COOKIES_FILE` في `.env`.
 - السجلات: `docker compose logs -f web`
 
 ## التشغيل بدون Docker
