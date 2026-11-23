@@ -38,7 +38,8 @@ def cookie_domain_matches(cookie_domain: str, site: str) -> bool:
 
 # Equivalent session cookies some platforms set instead of / alongside the main one.
 SESSION_ALIASES = {
-    "tiktok.com": {"sessionid", "sessionid_ss", "sid_tt"},
+    "tiktok.com": {"sessionid", "sessionid_ss", "sid_tt", "uid_tt", "uid_tt_ss",
+                   "sid_ucp_v1", "ssid_ucp_v1", "multi_sids", "cmpl_token"},
 }
 
 
