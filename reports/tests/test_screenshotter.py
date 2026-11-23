@@ -350,3 +350,33 @@ class ResolveCookiesFileTests(SimpleTestCase):
             self.assertEqual(resolve_cookies_file(), str(old))
         with self.settings(EVIDENCE={**settings.EVIDENCE, "COOKIES_FILE": "", "COOKIES_DIR": "/nope"}):
             self.assertEqual(resolve_cookies_file(), "")
+
+
+class ErrorStateIsNotReadyTests(SimpleTestCase):
+    """Regression: TikTok's 'حدث خطأ ما' used to count as a loaded page, so the
+    videos-sheet fallback was never produced."""
+
+    def test_persistent_error_means_grid_not_ready(self):
+        import time
+        cleaner = TikTokCleaner()
+        cleaner.READY_TIMEOUT_MS = 30000
+        with BrowserLauncher().context({"width": 800, "height": 600}) as ctx:
+            page = ctx.new_page()
+            page.set_content(ERROR_GRID.replace("{works_after}", "99"))
+            start = time.monotonic()
+            notes = cleaner.clean(page)
+            elapsed = time.monotonic() - start
+        self.assertFalse(cleaner.content_ready, notes)
+        self.assertLess(elapsed, 45)  # 3 refresh attempts + grace periods, not the full wait
+
+    def test_error_then_recovered_is_ready(self):
+        cleaner = TikTokCleaner()
+        cleaner.READY_TIMEOUT_MS = 30000
+        html = ERROR_GRID.replace("{works_after}", "1").replace(
+            "'<div data-e2e=\"user-post-item\">video</div>'",
+            "'<div data-e2e=\"user-post-item\"><img src=\"data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACwAAAAAAQABAAACAkQBADs=\"></div>'")
+        with BrowserLauncher().context({"width": 800, "height": 600}) as ctx:
+            page = ctx.new_page()
+            page.set_content(html)
+            cleaner.clean(page)
+        self.assertTrue(cleaner.content_ready)

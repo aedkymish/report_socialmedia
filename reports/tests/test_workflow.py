@@ -176,3 +176,49 @@ class MultipleLinksFormTests(TestCase):
         self.assertFalse(f.is_valid())
         html = str(f["links"])
         self.assertEqual(html.count('type="url" name="links"'), 2)
+
+
+class VideosSheetModeTests(TestCase):
+    def _collect(self, mode, grid_ready):
+        from reports.services.screenshotter import ScreenshotResult
+
+        class Shots:
+            def capture(self, url, out):
+                from PIL import Image
+                Image.new("RGB", (800, 400), "black").save(out)
+                return ScreenshotResult(out, [], content_ready=grid_ready)
+
+        class Lister:
+            calls = 0
+
+            def list(self, url):
+                Lister.calls += 1
+                return [{"id": "1", "url": "u", "title": "t", "thumbnail": "", "date": "", "views": None}]
+
+        class Renderer:
+            def render(self, header, profile_url, videos, out):
+                out.write_bytes(b"\x89PNG\r\n\x1a\n" + b"0" * 64)
+                return out
+
+        user = User.objects.create_user(f"Z{mode}{grid_ready}", password="x")
+        req = ActionRequest.objects.create(description="d", monitor=user, uploader=user,
+                                           platform_contact=user, created_by=user)
+        link = RequestLink.objects.create(request=req, url="https://www.tiktok.com/@a")
+        evidence = {**settings.EVIDENCE, "VIDEOS_SHEET": mode}
+        with self.settings(MEDIA_ROOT=TMP_MEDIA, EVIDENCE=evidence):
+            link = EvidenceCollector(downloader=FakeDownloader(), screenshotter=Shots(),
+                                     video_lister=Lister(), sheet_renderer=Renderer()).collect(link)
+        return link, Lister.calls
+
+    def test_auto_creates_only_when_grid_missing(self):
+        link, calls = self._collect("auto", grid_ready=False)
+        self.assertTrue(link.profile_videos_image)
+        self.assertIn("لم تظهر في لقطة الشاشة", link.evidence_log)
+        link, calls = self._collect("auto", grid_ready=True)
+        self.assertFalse(link.profile_videos_image)
+        self.assertEqual(calls, 0)
+        self.assertIn("EVIDENCE_VIDEOS_SHEET=always", link.evidence_log)
+
+    def test_always_and_never(self):
+        self.assertTrue(self._collect("always", grid_ready=True)[0].profile_videos_image)
+        self.assertFalse(self._collect("never", grid_ready=False)[0].profile_videos_image)

@@ -134,9 +134,21 @@ class EvidenceCollector:
             link.profile_screenshot.save(f"profile_{stamp}.png", File(fh), save=False)
         log.append(f"تم تصوير الصفحة الشخصية: {url} SHA-256={link.screenshot_sha256}")
         log.extend(getattr(result, "notes", []))
-        if not getattr(result, "content_ready", True):
-            self._collect_videos_sheet(link, url, out, log)
+        self._maybe_videos_sheet(link, url, out, getattr(result, "content_ready", True), log)
         return True
+
+    def _maybe_videos_sheet(self, link, url: str, screenshot: Path, grid_ready: bool, log: list[str]) -> None:
+        mode = settings.EVIDENCE.get("VIDEOS_SHEET", "auto")
+        if mode == "never":
+            return
+        if mode == "always":
+            self._collect_videos_sheet(link, url, screenshot, log)
+        elif not grid_ready:
+            log.append("شبكة الفيديوهات لم تظهر في لقطة الشاشة؛ جارٍ إنشاء قائمة فيديوهات الحساب بديلاً.")
+            self._collect_videos_sheet(link, url, screenshot, log)
+        else:
+            log.append("شبكة الفيديوهات ظاهرة في لقطة الشاشة؛ لا حاجة لقائمة الفيديوهات البديلة "
+                       "(لإنشائها دائماً: EVIDENCE_VIDEOS_SHEET=always).")
 
     def _collect_videos_sheet(self, link: RequestLink, profile_url: str, screenshot: Path, log: list[str]) -> None:
         """Fallback when the platform hid the video grid from the screenshot."""

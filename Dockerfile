@@ -23,11 +23,13 @@ RUN --mount=type=secret,id=extra_ca,required=false \
     pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-RUN chmod +x docker/entrypoint.sh \
+# Strip Windows CRLF line endings (git autocrlf) so the script runs on Linux.
+RUN sed -i 's/\r$//' docker/entrypoint.sh \
+    && chmod +x docker/entrypoint.sh \
     && DJANGO_SECRET_KEY=build python manage.py collectstatic --noinput
 
 VOLUME ["/app/data"]
 EXPOSE 8000
-ENTRYPOINT ["docker/entrypoint.sh"]
+ENTRYPOINT ["sh", "/app/docker/entrypoint.sh"]
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", \
      "--workers", "2", "--threads", "4", "--timeout", "120", "--access-logfile", "-"]

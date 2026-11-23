@@ -41,6 +41,7 @@ class PageCleaner:
     # JS predicate returning true once the page has *really* rendered (not just
     # its skeleton placeholders). None = only wait for CONTENT_SELECTOR.
     READY_JS: str | None = None
+    ERROR_JS: str | None = None
     READY_TIMEOUT_MS = 25000
     NOT_READY_NOTE = "تنبيه: انتهت مهلة انتظار تحميل محتوى الصفحة؛ قد تظهر أجزاء غير مكتملة في الصورة."
 
@@ -105,7 +106,7 @@ class PageCleaner:
                 break
             retried += 1
             try:
-                page.wait_for_selector(self.RETRY_SUCCESS_SELECTOR, state="visible", timeout=8000)
+                page.wait_for_selector(self.RETRY_SUCCESS_SELECTOR, state="visible", timeout=6000)
                 page.wait_for_timeout(1500)  # let thumbnails paint
                 return [f"تعذر تحميل المحتوى أولاً، ونجح بعد إعادة المحاولة ({retried})."]
             except Exception:
@@ -127,6 +128,14 @@ class PageCleaner:
         except Exception:
             return False
 
+    def _shows_error(self, page) -> bool:
+        if not self.ERROR_JS:
+            return False
+        try:
+            return bool(page.evaluate(self.ERROR_JS))
+        except Exception:
+            return False
+
     def _wait_until_ready(self, page) -> bool:
         if not self.READY_JS:
             return True
@@ -135,7 +144,7 @@ class PageCleaner:
             if self._is_ready(page):
                 page.wait_for_timeout(1000)  # let the last thumbnails paint
                 return True
-            if self.refused_reason():
+            if self.refused_reason() or self._shows_error(page):
                 refused_for += step
                 if refused_for >= 5000:  # grace period: the site may retry by itself
                     return False
@@ -207,7 +216,14 @@ class TikTokCleaner(PageCleaner):
         const loaded = imgs.filter(i => i.complete && i.naturalWidth > 0).length;
         if (imgs.length && loaded >= Math.min(6, imgs.length)) return true;
         const t = document.body ? document.body.innerText : "";
-        return /لا يوجد محتوى|لا توجد مقاطع|No content|This account is private|هذا الحساب خاص|حساب خاص|حدث خطأ ما|Something went wrong/i.test(t);
+        return /لا يوجد محتوى|لا توجد مقاطع|No content|This account is private|هذا الحساب خاص|حساب خاص/i.test(t);
+    }"""
+    # In-page failure ("Something went wrong" + Refresh): stop waiting so the
+    # retry step runs; it never counts as ready.
+    ERROR_JS = r"""() => {
+        if (document.querySelector('[data-e2e="user-post-item"] img')) return false;
+        const t = document.body ? document.body.innerText : "";
+        return /حدث خطأ ما|Something went wrong/i.test(t);
     }"""
     NOT_READY_NOTE = ("تنبيه: لم تكتمل صور الفيديوهات في صفحة تيك توك خلال المهلة؛ "
                       "بيانات الحساب ظاهرة لكن قد تظهر مربعات فارغة مكان الفيديوهات.")
