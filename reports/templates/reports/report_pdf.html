@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>تقرير طلبات الإجراء</title>
+<style>
+  {{ font_css|safe }}
+  :root { --ink:#1d2733; --muted:#5b6670; --line:#d9dee4; --brand:#0f4c5c; --ok:#1e7d4f; --warn:#8a5300; --bad:#b3261e; }
+  @page { size: A4; margin: 14mm 12mm 16mm; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"ReportSans", sans-serif; color:var(--ink); font-size:11pt; line-height:1.6;
+         -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  h1 { font-size:16pt; margin:0 0 4px; } h2 { font-size:12pt; margin:0 0 8px; color:var(--brand); }
+  .muted { color:var(--muted); }
+  .ltr { direction:ltr; unicode-bidi:embed; }
+  .card { margin-bottom:14px; }
+  .form-head { text-align:center; border-bottom:2px solid var(--brand); padding-bottom:8px; margin-bottom:12px; }
+  table { width:100%; border-collapse:collapse; font-size:9.5pt; }
+  th, td { padding:5px 6px; border-bottom:1px solid var(--line); text-align:start; vertical-align:top; }
+  th { background:#eef2f5; font-weight:700; }
+  .badge { display:inline-block; padding:0 7px; border-radius:9px; font-size:8.5pt; background:#e6ebef; white-space:nowrap; }
+  .b-approved { background:#dcefe4; color:var(--ok); } .b-rejected { background:#f7dedc; color:var(--bad); }
+  .b-submitted { background:#fbeccf; color:var(--warn); }
+  .tile { background:#fff; }
+  .tiles { grid-template-columns:repeat(5,1fr) !important; gap:8px !important; }
+  .tile { padding:8px 10px !important; }
+  .tile .num { font-size:17pt !important; }
+  .tile .lbl { font-size:8.5pt !important; }
+  .charts { grid-template-columns:1fr 1fr !important; }
+</style>
+{% include "reports/_report_styles.html" %}
+</head>
+<body>
+{% with f=result.filter %}
+{% include "reports/_report_body.html" %}
+{% endwith %}
+</body>
+</html>

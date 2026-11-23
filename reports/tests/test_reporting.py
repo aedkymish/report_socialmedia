@@ -68,3 +68,17 @@ class ReportTests(TestCase):
         body = csv.content.decode("utf-8-sig")
         self.assertIn("رقم الطلب", body)
         self.assertEqual(body.count("\n"), 4)  # title + header + 2 rows
+
+
+class ReportPdfTests(TestCase):
+    def test_pdf_export_embeds_arabic_font(self):
+        u = User.objects.create_user("M1", password="x")
+        ActionRequest.objects.create(platforms=["tiktok"], actions=["block"], description="d",
+                                     monitor=u, uploader=u, platform_contact=u, created_by=u)
+        self.client.force_login(u)
+        resp = self.client.get(reverse("reports:report"), {"export": "pdf", "platform": "tiktok"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp["Content-Type"], "application/pdf")
+        self.assertTrue(resp["Content-Disposition"].endswith('.pdf"'))
+        self.assertTrue(resp.content.startswith(b"%PDF"))
+        self.assertIn(b"NotoSansArabic", resp.content)  # font embedded, not system fallback

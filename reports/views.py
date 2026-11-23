@@ -8,10 +8,13 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView
 
+from django.conf import settings
 from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django.views.generic import TemplateView
 
 from .forms import ActionRequestForm, DecisionForm
+from .services.pdf import PdfRenderer, embedded_font_css
 from .reporting import FORM_PLATFORMS, ReportBuilder, ReportCsvExporter, ReportFilter
 from .models import ActionRequest, ActionType, RequestLink
 from .services import EvidenceDispatcher, LinkAnalyzer
@@ -149,12 +152,27 @@ class ReportView(LoginRequiredMixin, TemplateView):
 
     def get(self, request, *args, **kwargs):
         result = ReportBuilder().build(ReportFilter.from_query(request.GET))
-        if request.GET.get("export") == "csv":
-            f = result.filter
-            response = HttpResponse(ReportCsvExporter().export(result), content_type="text/csv; charset=utf-8")
-            response["Content-Disposition"] = f'attachment; filename="report_{f.date_from}_{f.date_to}.csv"'
-            return response
+        export = request.GET.get("export")
+        if export == "csv":
+            return self._file(ReportCsvExporter().export(result), "text/csv; charset=utf-8", result, "csv")
+        if export == "pdf":
+            return self._file(self._pdf(result), "application/pdf", result, "pdf")
         return self.render_to_response(self.get_context_data(result=result))
+
+    def _pdf(self, result) -> bytes:
+        html = render_to_string("reports/report_pdf.html",
+                                {"result": result, "pdf": True, "font_css": embedded_font_css()},
+                                request=self.request)
+        f = result.filter
+        label = f"Report {f.date_from} - {f.date_to} | {self.request.user.username}"
+        return PdfRenderer(settings.EVIDENCE["CHROMIUM_EXECUTABLE"]).render(html, footer_label=label)
+
+    @staticmethod
+    def _file(content: bytes, content_type: str, result, ext: str) -> HttpResponse:
+        f = result.filter
+        response = HttpResponse(content, content_type=content_type)
+        response["Content-Disposition"] = f'attachment; filename="report_{f.date_from}_{f.date_to}.{ext}"'
+        return response
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

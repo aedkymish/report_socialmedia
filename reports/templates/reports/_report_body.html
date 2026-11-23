@@ -1,0 +1,50 @@
+<div class="card">
+  <div class="form-head">
+    <div class="muted">إدارة الشؤون الفنية — فريق الرصد والمتابعة الإلكترونية</div>
+    <h1>تقرير طلبات الإجراء</h1>
+    <div>من <b>{{ f.date_from|date:"Y/m/d" }}</b> إلى <b>{{ f.date_to|date:"Y/m/d" }}</b> ({{ f.days }} يوم)
+      {% if f.platforms %} — المنصات: {% for b in result.by_platform %}{{ b.label }}{% if not forloop.last %}، {% endif %}{% endfor %}{% endif %}
+      {% if f.actions %} — الإجراءات: {% for b in result.by_action %}{{ b.label }}{% if not forloop.last %}، {% endif %}{% endfor %}{% endif %}
+    </div>
+    {% if pdf %}<div class="muted" style="font-size:.8rem;margin-top:4px">أُعدّ بواسطة <span class="ltr">{{ request.user.username }}</span> بتاريخ {% now "Y/m/d H:i" %}</div>{% endif %}
+  </div>
+
+  <div class="tiles">
+    <div class="tile"><div class="num">{{ result.total }}</div><div class="lbl">عدد الطلبات</div></div>
+    <div class="tile"><div class="num">{{ result.links_total }}</div><div class="lbl">عدد الروابط</div></div>
+    <div class="tile"><div class="num">{{ result.videos }}</div><div class="lbl">فيديوهات محمّلة</div></div>
+    <div class="tile"><div class="num">{{ result.evidence_done }}</div><div class="lbl">أدلة مكتملة{% if result.evidence_failed %} · فشل {{ result.evidence_failed }}{% endif %}</div></div>
+    <div class="tile"><div class="num">{% if result.approval_rate is not None %}{{ result.approval_rate }}%{% else %}—{% endif %}</div><div class="lbl">نسبة الاعتماد من الطلبات المبتوت فيها</div></div>
+  </div>
+
+  <div class="charts" style="margin-top:18px">
+    <div><h2>الطلبات حسب المنصة</h2>{% include "reports/_bars.html" with bars=result.by_platform title="الطلبات حسب المنصة" %}</div>
+    <div><h2>الطلبات حسب نوع الإجراء</h2>{% include "reports/_bars.html" with bars=result.by_action title="الطلبات حسب نوع الإجراء" %}</div>
+    <div><h2>الطلبات حسب الحالة</h2>{% include "reports/_bars.html" with bars=result.by_status title="الطلبات حسب الحالة" %}</div>
+    <div><h2>الروابط حسب المنصة</h2>{% include "reports/_bars.html" with bars=result.links_by_platform title="الروابط حسب المنصة" %}</div>
+  </div>
+  <p class="muted" style="font-size:.85rem">الطلب الواحد قد يشمل أكثر من منصة أو إجراء، لذا قد يزيد مجموع الأعمدة عن عدد الطلبات.</p>
+</div>
+
+<div class="card">
+  <h2>تفاصيل الطلبات ({{ result.total }})</h2>
+  <div style="overflow-x:auto">
+  <table>
+    <thead><tr><th>#</th><th>التاريخ</th><th>المنصات</th><th>الإجراء</th><th>الروابط</th><th>مسؤول الرصد</th><th>الحالة</th><th>المعتمد</th></tr></thead>
+    <tbody>
+    {% for r in result.requests %}
+    <tr>
+      <td>{% if pdf %}{{ r.pk }}{% else %}<a href="{{ r.get_absolute_url }}">{{ r.pk }}</a>{% endif %}</td>
+      <td style="white-space:nowrap">{{ r.created_at|date:"Y/m/d H:i" }}</td>
+      <td>{{ r.platform_labels|join:"، " }}</td>
+      <td>{{ r.action_labels|join:"، " }}</td>
+      <td>{{ r.link_count }}</td>
+      <td class="ltr">{{ r.monitor.username }}</td>
+      <td><span class="badge b-{{ r.status }}">{{ r.get_status_display }}</span></td>
+      <td>{% if r.approved_by %}<span class="ltr">{{ r.approved_by.username }}</span> <span class="muted">{{ r.approved_at|date:"Y/m/d" }}</span>{% else %}—{% endif %}</td>
+    </tr>
+    {% empty %}<tr><td colspan="8" class="muted">لا توجد طلبات تطابق المعايير المختارة.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
