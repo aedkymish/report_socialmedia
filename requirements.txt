@@ -1,4 +1,7 @@
 Django>=5.1,<6
 yt-dlp>=2025.1.1
-playwright>=1.48
+# Must match the Playwright Docker base image tag (see Dockerfile).
+playwright==1.65.2
 Pillow>=10
+gunicorn>=23
+whitenoise>=6.7

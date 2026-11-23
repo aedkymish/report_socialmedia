@@ -21,7 +21,18 @@
 | Controller | `reports/views.py` (Class-Based Views)، `reports/forms.py` |
 | Services | `reports/services/`: `LinkAnalyzer`، `VideoDownloader`، `ProfileScreenshotter`، `EvidenceCollector`، `EvidenceDispatcher` |
 
-## التشغيل
+## التشغيل عبر Docker (موصى به)
+```bash
+cp .env.example .env        # عدّل كلمة السر و DJANGO_SECRET_KEY
+docker compose up -d --build
+```
+ثم افتح http://localhost:8000 وادخل بالكود `DJANGO_SUPERUSER_USERNAME` الموجود في `.env`.
+- قاعدة البيانات والفيديوهات والصور تُحفظ في الـ volume `app_data` (`/app/data` داخل الحاوية).
+- الصورة مبنية على صورة Playwright الرسمية (فيها Chromium) ومعها ffmpeg.
+- للمنصات التي تطلب تسجيل دخول: ضع `cookies.txt` وفعّل السطر الخاص به في `docker-compose.yml` و `YTDLP_COOKIES_FILE` في `.env`.
+- السجلات: `docker compose logs -f web`
+
+## التشغيل بدون Docker
 ```bash
 pip install -r requirements.txt
 python -m playwright install chromium    # مرة واحدة
