@@ -69,7 +69,18 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = "ar"
-TIME_ZONE = os.environ.get("DJANGO_TIME_ZONE", "Asia/Riyadh")
+def _resolve_time_zone(value: str) -> str:
+    """Accept any letter case (e.g. "africa/tripoli" -> "Africa/Tripoli")."""
+    from zoneinfo import available_timezones
+
+    value = value.strip()
+    zones = {z.lower(): z for z in available_timezones()}
+    if value.lower() not in zones:
+        raise ValueError(f"DJANGO_TIME_ZONE غير صحيح: {value!r} (مثال صحيح: Africa/Tripoli)")
+    return zones[value.lower()]
+
+
+TIME_ZONE = _resolve_time_zone(os.environ.get("DJANGO_TIME_ZONE", "Africa/Tripoli"))
 USE_I18N = True
 USE_TZ = True
 
