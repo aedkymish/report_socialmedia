@@ -84,6 +84,17 @@ class ActionRequestForm(forms.ModelForm):
         return urls
 
 
+class AuthorizedPersonsForm(forms.ModelForm):
+    """خامساً: تعديل أكواد المخولين قبل الاعتماد."""
+
+    monitor = UserCodeField(label="1. مسؤول الرصد - الكود")
+    uploader = UserCodeField(label="2. المسؤول عن التحميل في القناة - الكود")
+
+    class Meta:
+        model = ActionRequest
+        fields = ["monitor", "uploader"]
+
+
 class DecisionForm(forms.Form):
     decision = forms.ChoiceField(choices=[("approve", "اعتماد"), ("reject", "رفض")])
     note = forms.CharField(label="ملاحظات", required=False, widget=forms.Textarea(attrs={"rows": 2}))

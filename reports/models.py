@@ -89,6 +89,18 @@ class ActionRequest(models.Model):
     def action_labels(self) -> list[str]:
         return [ActionType(a).label for a in self.actions if a in ActionType.values]
 
+    # --- permissions ---
+    @property
+    def is_pending(self) -> bool:
+        return self.status == self.Status.SUBMITTED
+
+    def can_edit_authorized(self, user) -> bool:
+        """خامساً (المخولون بالعمليات) is editable until the request is decided,
+        by its creator, an approver or a superadmin."""
+        if not (self.is_pending and user.is_authenticated):
+            return False
+        return user.pk == self.created_by_id or getattr(user, "is_approver", False) or user.is_superuser
+
     # --- workflow transitions ---
     def approve(self, user, note: str = "") -> None:
         self._decide(self.Status.APPROVED, user, note)

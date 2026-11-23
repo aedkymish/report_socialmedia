@@ -238,3 +238,57 @@ class PlatformContactCodeTests(TestCase):
                 "platform_contact_code": "HACK", "declaration_accepted": "on", "consent_accepted": "on",
             })
         self.assertEqual(ActionRequest.objects.get().platform_contact_code, "777")
+
+
+class AuthorizedPersonsEditTests(TestCase):
+    """خامساً: editable before approval by creator / approver / superadmin, then locked."""
+
+    def setUp(self):
+        self.creator = User.objects.create_user("M100", password="x", role=User.Role.MONITOR)
+        self.other = User.objects.create_user("M200", password="x", role=User.Role.MONITOR)
+        self.up = User.objects.create_user("U200", password="x", role=User.Role.UPLOADER)
+        self.boss = User.objects.create_user("A900", password="x", role=User.Role.APPROVER)
+        self.req = ActionRequest.objects.create(description="d", monitor=self.creator, uploader=self.up,
+                                                created_by=self.creator)
+        self.url = reverse("reports:authorized", args=[self.req.pk])
+
+    def test_creator_edits_and_change_is_audited(self):
+        from auditlog.models import LogEntry
+        self.client.force_login(self.creator)
+        self.assertContains(self.client.get(self.req.get_absolute_url()), 'id="edit-authorized"')
+        resp = self.client.post(self.url, {"monitor": "M200", "uploader": "U200"})
+        self.assertRedirects(resp, self.req.get_absolute_url())
+        self.req.refresh_from_db()
+        self.assertEqual(self.req.monitor, self.other)
+        entry = LogEntry.objects.get_for_object(self.req).filter(action=LogEntry.Action.UPDATE).latest("timestamp")
+        self.assertEqual(entry.actor, self.creator)
+        self.assertIn("monitor", entry.changes_dict)
+
+    def test_unknown_code_shows_error_and_keeps_form_open(self):
+        self.client.force_login(self.creator)
+        resp = self.client.post(self.url, {"monitor": "NOPE", "uploader": "U200"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "الكود غير موجود")
+        self.assertNotContains(resp, 'id="edit-authorized" class="no-print"\n        style="border:1px solid var(--line);border-radius:8px;padding:12px;margin:10px 0" hidden')
+        self.req.refresh_from_db()
+        self.assertEqual(self.req.monitor, self.creator)
+
+    def test_other_users_cannot_edit(self):
+        self.client.force_login(self.other)
+        self.assertNotContains(self.client.get(self.req.get_absolute_url()), 'id="edit-authorized"')
+        self.client.post(self.url, {"monitor": "M200", "uploader": "U200"})
+        self.req.refresh_from_db()
+        self.assertEqual(self.req.monitor, self.creator)
+
+    def test_approver_can_edit_then_locked_after_decision(self):
+        self.client.force_login(self.boss)
+        self.client.post(self.url, {"monitor": "M200", "uploader": "U200"})
+        self.req.refresh_from_db()
+        self.assertEqual(self.req.monitor, self.other)
+        self.req.approve(self.boss)
+        page = self.client.get(self.req.get_absolute_url())
+        self.assertNotContains(page, 'id="edit-authorized"')
+        self.assertContains(page, "لا يمكن تعديل المخولين بعد اعتماد الطلب")
+        self.client.post(self.url, {"monitor": "M100", "uploader": "U200"})
+        self.req.refresh_from_db()
+        self.assertEqual(self.req.monitor, self.other)

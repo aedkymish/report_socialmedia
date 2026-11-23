@@ -20,7 +20,29 @@
   <h2>رابعاً: شرح مبسط عن الحالة / سبب الطلب</h2>
   <p style="white-space:pre-line">{{ object.description }}</p>
 
-  <h2>خامساً: المخولون بالعمليات</h2>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+    <h2 style="margin:0">خامساً: المخولون بالعمليات</h2>
+    {% if can_edit_authorized %}<button type="button" class="btn small secondary no-print" id="edit-authorized-btn"
+      onclick="document.getElementById('edit-authorized').hidden=false;this.hidden=true">تعديل</button>{% endif %}
+  </div>
+  {% if can_edit_authorized %}
+  <form method="post" action="{% url 'reports:authorized' object.pk %}" id="edit-authorized" class="no-print"
+        style="border:1px solid var(--line);border-radius:8px;padding:12px;margin:10px 0" {% if not edit_open %}hidden{% endif %}>
+    {% csrf_token %}
+    {{ authorized_form.non_field_errors }}
+    <div class="grid3">
+      <div>{% include "reports/_field.html" with f=authorized_form.monitor %}</div>
+      <div>{% include "reports/_field.html" with f=authorized_form.uploader %}</div>
+      <div class="field"><label>3. مسؤول المنصة (نقطة الاتصال) - الكود</label>
+        <input type="text" value="{{ object.platform_contact_code }}" dir="ltr" readonly style="background:#eef2f5"></div>
+    </div>
+    <datalist id="user-codes">{% for u in users %}<option value="{{ u.username }}">{{ u.full_name }} — {{ u.get_role_display }}</option>{% endfor %}</datalist>
+    <button class="btn">حفظ التعديل</button>
+    <button type="button" class="btn secondary" onclick="this.form.hidden=true;document.getElementById('edit-authorized-btn').hidden=false">إلغاء</button>
+    <span class="muted" style="font-size:.85rem">يمكن التعديل حتى اعتماد الطلب أو رفضه، ويُسجَّل كل تعديل في سجل التدقيق.</span>
+  </form>
+  {% if edit_open %}<script>document.getElementById('edit-authorized-btn').hidden = true;</script>{% endif %}
+  {% elif not object.is_pending %}<p class="muted no-print" style="font-size:.85rem;margin:6px 0">🔒 لا يمكن تعديل المخولين بعد اعتماد الطلب أو رفضه.</p>{% endif %}
   <table>
     <tr><th>الصفة</th><th>الكود</th><th>الاسم</th><th>المهمة</th></tr>
     <tr><td>1. مسؤول الرصد</td><td class="ltr">{{ object.monitor.username }}</td><td>{{ object.monitor.full_name }}</td><td>مسؤول عن الرصد والمتابعة الإلكترونية</td></tr>

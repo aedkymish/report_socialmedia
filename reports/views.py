@@ -13,7 +13,7 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.views.generic import TemplateView
 
-from .forms import ActionRequestForm, DecisionForm
+from .forms import ActionRequestForm, AuthorizedPersonsForm, DecisionForm
 from .services.pdf import PdfRenderer, embedded_font_css, report_logo_data_uri
 from .reporting import FORM_PLATFORMS, ReportBuilder, ReportCsvExporter, ReportFilter
 from .models import ActionRequest, ActionType, RequestLink
@@ -95,10 +95,38 @@ class RequestDetailView(LoginRequiredMixin, DetailView):
             for l in links
         )
         ctx["decision_form"] = DecisionForm()
+        ctx["can_edit_authorized"] = self.object.can_edit_authorized(self.request.user)
+        if ctx["can_edit_authorized"]:
+            ctx["authorized_form"] = kwargs.get("authorized_form") or AuthorizedPersonsForm(
+                initial={"monitor": self.object.monitor.username, "uploader": self.object.uploader.username})
+            ctx["users"] = get_user_model().objects.filter(is_active=True).order_by("username")
+            ctx["edit_open"] = "authorized_form" in kwargs
         ctx["can_decide"] = (
             self.request.user.is_approver and self.object.status == ActionRequest.Status.SUBMITTED
         )
         return ctx
+
+
+class AuthorizedPersonsUpdateView(LoginRequiredMixin, View):
+    """POST: تعديل خامساً (مسؤول الرصد / المسؤول عن التحميل) قبل الاعتماد."""
+
+    def post(self, request, pk):
+        obj = get_object_or_404(ActionRequest.objects.select_related("monitor", "uploader"), pk=pk)
+        if not obj.can_edit_authorized(request.user):
+            messages.error(request, "لا يمكن تعديل المخولين: الطلب معتمد/مرفوض أو ليست لديك الصلاحية.")
+            return redirect(obj)
+        form = AuthorizedPersonsForm(request.POST, instance=obj)
+        if not form.is_valid():
+            detail = RequestDetailView()
+            detail.setup(request, pk=pk)
+            detail.object = detail.get_object()
+            return detail.render_to_response(detail.get_context_data(authorized_form=form))
+        if form.has_changed():
+            form.save()
+            messages.success(request, "تم تعديل المخولين بالعمليات (مسجّل في سجل التدقيق).")
+        else:
+            messages.info(request, "لم يتغير شيء.")
+        return redirect(obj)
 
 
 class RequestDecisionView(LoginRequiredMixin, UserPassesTestMixin, View):
