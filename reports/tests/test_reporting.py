@@ -122,3 +122,61 @@ class ReportLogoTests(TestCase):
         rel = self.png.relative_to(self.dir)
         with self.settings(BASE_DIR=self.dir, REPORT={**settings.REPORT, "LOGO_PATH": str(rel)}):
             self.assertTrue(report_logo_data_uri().startswith("data:image/png;base64,"))
+
+
+import shutil as _shutil
+import unittest as _unittest
+
+
+@_unittest.skipUnless(_shutil.which("pdfimages") and _shutil.which("pdfinfo"), "poppler-utils not installed")
+class WatermarkTests(TestCase):
+    """Logo watermark repeated on every printed/PDF page."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        from PIL import Image
+        self.dir = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: __import__("shutil").rmtree(self.dir, ignore_errors=True))
+        self.png = self.dir / "logo.png"
+        Image.new("RGB", (60, 60), "navy").save(self.png)
+        self.u = User.objects.create_user("M1", password="x")
+        for i in range(70):  # enough rows for several PDF pages
+            ActionRequest.objects.create(platforms=["tiktok"], actions=["block"], description="d",
+                                         monitor=self.u, uploader=self.u, created_by=self.u)
+        self.client.force_login(self.u)
+
+    def _pdf_pages_with_images(self, **report):
+        """(page count, number of pages that draw at least one image) via poppler's pdfimages."""
+        import subprocess
+        import tempfile
+        from django.conf import settings
+        with self.settings(REPORT={**settings.REPORT, "LOGO_PATH": str(self.png), **report}):
+            pdf = self.client.get(reverse("reports:report"), {"export": "pdf"}).content
+        with tempfile.NamedTemporaryFile(suffix=".pdf") as fh:
+            fh.write(pdf)
+            fh.flush()
+            info = subprocess.run(["pdfinfo", fh.name], capture_output=True, text=True, check=True).stdout
+            listing = subprocess.run(["pdfimages", "-list", fh.name], capture_output=True, text=True, check=True).stdout
+        pages = int(next(l.split()[-1] for l in info.splitlines() if l.startswith("Pages:")))
+        with_images = {l.split()[0] for l in listing.splitlines()[2:] if l.split()[2:3] == ["image"]}
+        return pages, len(with_images)
+
+    def test_every_pdf_page_has_watermark(self):
+        pages, refs = self._pdf_pages_with_images(WATERMARK=True)
+        self.assertGreaterEqual(pages, 2)
+        self.assertEqual(refs, pages)  # every page draws the watermark
+
+    def test_watermark_can_be_disabled(self):
+        pages, refs = self._pdf_pages_with_images(WATERMARK=False)
+        self.assertGreaterEqual(pages, 2)
+        self.assertEqual(refs, 1)  # only the header logo on page 1
+
+    def test_screen_page_has_hidden_print_watermark(self):
+        from django.conf import settings
+        req = ActionRequest.objects.first()
+        with self.settings(REPORT={**settings.REPORT, "LOGO_PATH": str(self.png), "WATERMARK": True,
+                                   "WATERMARK_OPACITY": 0.1}):
+            html = self.client.get(req.get_absolute_url()).content.decode()
+        self.assertIn('class="print-watermark"', html)
+        self.assertIn("opacity:0.10", html)

@@ -304,6 +304,9 @@ pre.log { white-space:pre-wrap; background:var(--surface-2); border:1px solid va
   .brand-text span { display:none; }
 }
 
+/* ---------- Print watermark (repeated on every printed page) ---------- */
+.print-watermark { display:none; }
+
 /* ---------- Print ---------- */
 @media print {
   @page { size:A4; margin:14mm 12mm; }
@@ -321,4 +324,8 @@ pre.log { white-space:pre-wrap; background:var(--surface-2); border:1px solid va
   .choice { border-color:#999; }
   a { color:inherit; text-decoration:none; }
   .badge::before { display:none; }
+  /* position:fixed boxes repeat on every printed page; multiply keeps text dark */
+  .print-watermark { display:flex; position:fixed; inset:0; align-items:center; justify-content:center;
+                     z-index:9999; pointer-events:none; mix-blend-mode:multiply; }
+  .print-watermark img { width:120mm; max-width:75%; max-height:55%; object-fit:contain; filter:grayscale(20%); }
 }

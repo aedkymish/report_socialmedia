@@ -45,6 +45,7 @@
 </style>
 </head>
 <body>
+{% if watermark %}{% include "ui/watermark.html" with src=logo opacity=watermark_opacity %}{% endif %}
 {% with f=result.filter %}
 {% include "reports/_report_body.html" %}
 {% endwith %}

@@ -193,6 +193,8 @@ class ReportView(LoginRequiredMixin, TemplateView):
                                 {"result": result, "pdf": True, "font_css": embedded_font_css(),
                                  "app_css": app_css(),
                                  "logo": report_logo_data_uri(),
+                                 "watermark": settings.REPORT["WATERMARK"],
+                                 "watermark_opacity": settings.REPORT["WATERMARK_OPACITY"],
                                  "logo_height": settings.REPORT["LOGO_HEIGHT"]},
                                 request=self.request)
         f = result.filter
