@@ -1,1 +1,1 @@
-{% if src %}<div class="print-watermark" aria-hidden="true"><img src="{{ src }}" alt="" style="opacity:{{ opacity|stringformat:'.2f' }}"></div>{% endif %}
+{% if src %}<div class="print-watermark" aria-hidden="true"><div class="wm-inner" style="opacity:{{ opacity|stringformat:'.2f' }}"><img src="{{ src }}" alt="">{% if text %}<div class="wm-text">{{ text }}</div>{% endif %}</div></div>{% endif %}

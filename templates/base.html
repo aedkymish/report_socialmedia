@@ -39,7 +39,7 @@
   {% if messages %}<ul class="messages">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
   {% block content %}{% endblock %}
 </main>
-{% if branding_watermark %}{% url 'reports:logo' as watermark_src %}{% include "ui/watermark.html" with src=watermark_src opacity=branding_watermark_opacity %}{% endif %}
+{% if branding_watermark %}{% url 'reports:logo' as watermark_src %}{% include "ui/watermark.html" with src=watermark_src opacity=branding_watermark_opacity text=branding_watermark_text %}{% endif %}
 <footer class="footer no-print">إدارة الشؤون الفنية — فريق الرصد والمتابعة الإلكترونية</footer>
 </body>
 </html>

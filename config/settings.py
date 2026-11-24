@@ -136,6 +136,8 @@ REPORT = {
     "LOGO_HEIGHT": int(os.environ.get("REPORT_LOGO_HEIGHT", "70")),
     # Faint logo watermark on every printed page (form print, report print, PDF).
     "WATERMARK": os.environ.get("REPORT_WATERMARK", "1") == "1",
+    # Text printed under the watermark logo (empty = logo only).
+    "WATERMARK_TEXT": os.environ.get("REPORT_WATERMARK_TEXT", "فريق الرصد والمتابعة الإلكترونية").strip(),
     # 0.02 (very faint) .. 0.3 (strong)
     "WATERMARK_OPACITY": min(max(float(os.environ.get("REPORT_WATERMARK_OPACITY", "0.07")), 0.02), 0.3),
 }

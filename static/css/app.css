@@ -327,5 +327,8 @@ pre.log { white-space:pre-wrap; background:var(--surface-2); border:1px solid va
   /* position:fixed boxes repeat on every printed page; multiply keeps text dark */
   .print-watermark { display:flex; position:fixed; inset:0; align-items:center; justify-content:center;
                      z-index:9999; pointer-events:none; mix-blend-mode:multiply; }
-  .print-watermark img { width:120mm; max-width:75%; max-height:55%; object-fit:contain; filter:grayscale(20%); }
+  .print-watermark .wm-inner { display:flex; flex-direction:column; align-items:center; gap:6mm; max-width:75%; }
+  .print-watermark img { width:110mm; max-width:100%; max-height:45vh; object-fit:contain; filter:grayscale(20%); }
+  .print-watermark .wm-text { font-size:24pt; font-weight:700; color:var(--brand-700); text-align:center;
+                              line-height:1.4; white-space:normal; }
 }

@@ -180,3 +180,15 @@ class WatermarkTests(TestCase):
             html = self.client.get(req.get_absolute_url()).content.decode()
         self.assertIn('class="print-watermark"', html)
         self.assertIn("opacity:0.10", html)
+        self.assertIn('<div class="wm-text">فريق الرصد والمتابعة الإلكترونية</div>', html)
+
+    def test_watermark_text_configurable_or_empty(self):
+        from django.conf import settings
+        req = ActionRequest.objects.first()
+        base = {**settings.REPORT, "LOGO_PATH": str(self.png), "WATERMARK": True}
+        with self.settings(REPORT={**base, "WATERMARK_TEXT": "نص مخصص"}):
+            self.assertIn('<div class="wm-text">نص مخصص</div>', self.client.get(req.get_absolute_url()).content.decode())
+        with self.settings(REPORT={**base, "WATERMARK_TEXT": ""}):
+            html = self.client.get(req.get_absolute_url()).content.decode()
+        self.assertIn('class="print-watermark"', html)
+        self.assertNotIn('class="wm-text"', html)

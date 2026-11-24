@@ -13,4 +13,5 @@ def branding(request):
         "branding_logo_height": settings.REPORT["LOGO_HEIGHT"],
         "branding_watermark": has_logo and settings.REPORT["WATERMARK"],
         "branding_watermark_opacity": settings.REPORT["WATERMARK_OPACITY"],
+        "branding_watermark_text": settings.REPORT["WATERMARK_TEXT"],
     }

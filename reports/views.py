@@ -195,6 +195,7 @@ class ReportView(LoginRequiredMixin, TemplateView):
                                  "logo": report_logo_data_uri(),
                                  "watermark": settings.REPORT["WATERMARK"],
                                  "watermark_opacity": settings.REPORT["WATERMARK_OPACITY"],
+                                 "watermark_text": settings.REPORT["WATERMARK_TEXT"],
                                  "logo_height": settings.REPORT["LOGO_HEIGHT"]},
                                 request=self.request)
         f = result.filter
