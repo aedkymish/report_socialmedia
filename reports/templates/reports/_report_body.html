@@ -38,7 +38,7 @@
     <thead><tr><th>#</th><th>التاريخ</th><th>المنصات</th><th>الإجراء</th><th class="num">الروابط</th><th>مسؤول الرصد</th><th>الحالة</th><th>المعتمد</th></tr></thead>
     <tbody>
     {% for r in result.requests %}
-    <tr>
+    <tr{% if not pdf %} class="row-click" data-href="{{ r.get_absolute_url }}" tabindex="0" aria-label="فتح الطلب رقم {{ r.pk }}"{% endif %}>
       <td>{% if pdf %}{{ r.pk }}{% else %}<a class="row-link" href="{{ r.get_absolute_url }}">{{ r.pk }}</a>{% endif %}</td>
       <td style="white-space:nowrap">{{ r.created_at|date:"Y/m/d H:i" }}</td>
       <td>{% platforms r.platforms 14 %}</td>

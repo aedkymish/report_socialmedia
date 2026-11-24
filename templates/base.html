@@ -41,5 +41,21 @@
 </main>
 {% if branding_watermark %}{% url 'reports:logo' as watermark_src %}{% include "ui/watermark.html" with src=watermark_src opacity=branding_watermark_opacity text=branding_watermark_text %}{% endif %}
 <footer class="footer no-print">إدارة الشؤون الفنية — فريق الرصد والمتابعة الإلكترونية</footer>
+<script>
+/* Clickable table rows: click / Enter opens data-href; Ctrl/⌘/middle-click opens a new tab;
+   clicks on links, buttons or form controls inside the row keep their own behaviour. */
+(function () {
+  function target(e) {
+    const row = e.target.closest('tr.row-click[data-href]');
+    if (!row || e.target.closest('a, button, input, select, textarea, label, summary')) return null;
+    if (window.getSelection && String(window.getSelection())) return null;  // user is selecting text
+    return row;
+  }
+  function open(row, newTab) { newTab ? window.open(row.dataset.href, '_blank', 'noopener') : (window.location.href = row.dataset.href); }
+  document.addEventListener('click', e => { const r = target(e); if (r) open(r, e.ctrlKey || e.metaKey || e.shiftKey); });
+  document.addEventListener('auxclick', e => { const r = target(e); if (r && e.button === 1) open(r, true); });
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') { const r = e.target.closest && e.target.closest('tr.row-click[data-href]'); if (r && r === e.target) open(r, false); } });
+})();
+</script>
 </body>
 </html>

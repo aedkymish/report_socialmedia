@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}حذف الطلب رقم {{ object.pk }}{% endblock %}
+{% block page_class %}page-narrow{% endblock %}
+{% block content %}
+<div class="card" style="max-width:620px;margin:24px auto">
+  <div style="display:flex;gap:14px;align-items:flex-start">
+    <span class="brand-mark" style="width:52px;height:52px;border-radius:14px;background:var(--bad-bg);color:var(--bad)">{% icon "alert" 28 %}</span>
+    <div>
+      <h1>حذف الطلب رقم {{ object.pk }}؟</h1>
+      <p class="muted" style="margin-top:4px">لا يمكن التراجع عن الحذف. يُسجَّل الحذف في سجل التدقيق باسمك.</p>
+    </div>
+  </div>
+
+  <div class="kv" style="margin:16px 0">
+    <div class="item"><div class="k">المنصات</div><div class="v">{% platforms object.platforms 15 %}</div></div>
+    <div class="item"><div class="k">الإجراء</div><div class="v">{% actions object.actions 15 %}</div></div>
+    <div class="item"><div class="k">تاريخ الإنشاء</div><div class="v">{{ object.created_at|date:"Y/m/d H:i" }}</div></div>
+    <div class="item"><div class="k">سيُحذف أيضاً</div><div class="v">{{ links_count }} رابط · {{ files_count }} ملف أدلة</div>
+      <div class="d">الفيديوهات وصور الصفحات المحفوظة لهذا الطلب</div></div>
+  </div>
+
+  <form method="post">{% csrf_token %}
+    <div class="btn-row" style="justify-content:flex-end">
+      <a class="btn secondary" href="{{ object.get_absolute_url }}">إلغاء</a>
+      <button class="btn danger">{% icon "trash" 17 %}نعم، احذف الطلب</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

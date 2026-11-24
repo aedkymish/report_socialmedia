@@ -27,7 +27,7 @@
     <thead><tr><th>#</th><th>المنصات</th><th>الإجراء</th><th class="num">الروابط</th><th>مسؤول الرصد</th><th>الحالة</th><th>التاريخ</th></tr></thead>
     <tbody>
     {% for r in object_list %}
-    <tr>
+    <tr class="row-click" data-href="{{ r.get_absolute_url }}" tabindex="0" aria-label="فتح الطلب رقم {{ r.pk }}">
       <td><a class="row-link" href="{{ r.get_absolute_url }}">{{ r.pk }}</a></td>
       <td>{% platforms r.platforms %}</td>
       <td>{% actions r.actions %}</td>

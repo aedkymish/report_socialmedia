@@ -5,8 +5,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse_lazy
 from django.views import View
-from django.views.generic import CreateView, DetailView, ListView
+from django.views.generic import CreateView, DeleteView, DetailView, ListView
 
 from django.conf import settings
 from django.http import HttpResponse
@@ -96,6 +97,7 @@ class RequestDetailView(LoginRequiredMixin, DetailView):
         )
         ctx["decision_form"] = DecisionForm()
         ctx["can_edit_authorized"] = self.object.can_edit_authorized(self.request.user)
+        ctx["can_delete"] = self.object.can_delete(self.request.user)
         if ctx["can_edit_authorized"]:
             ctx["authorized_form"] = kwargs.get("authorized_form") or AuthorizedPersonsForm(
                 initial={"monitor": self.object.monitor.username, "uploader": self.object.uploader.username})
@@ -105,6 +107,38 @@ class RequestDetailView(LoginRequiredMixin, DetailView):
             self.request.user.is_approver and self.object.status == ActionRequest.Status.SUBMITTED
         )
         return ctx
+
+
+class RequestDeleteView(LoginRequiredMixin, DeleteView):
+    """حذف الطلب قبل الاعتماد: GET = صفحة تأكيد، POST = حذف (مع ملفات الأدلة)."""
+
+    model = ActionRequest
+    template_name = "reports/request_confirm_delete.html"
+    success_url = reverse_lazy("reports:list")
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            obj = get_object_or_404(ActionRequest, pk=kwargs["pk"])
+            if not obj.can_delete(request.user):
+                messages.error(request, "لا يمكن حذف الطلب: تم اعتماده/رفضه أو ليست لديك الصلاحية.")
+                return redirect(obj)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        links = list(self.object.links.all())
+        ctx["links_count"] = len(links)
+        ctx["files_count"] = sum(bool(f) for l in links
+                                 for f in (l.video_file, l.profile_screenshot, l.profile_videos_image))
+        return ctx
+
+    def form_valid(self, form):
+        number = self.object.pk
+        with transaction.atomic():
+            self.object.delete_evidence_files()
+            self.object.delete()  # links cascade; django-auditlog records who deleted it
+        messages.success(self.request, f"تم حذف الطلب رقم {number} وملفات أدلته.")
+        return redirect(self.success_url)
 
 
 class AuthorizedPersonsUpdateView(LoginRequiredMixin, View):

@@ -94,12 +94,31 @@ class ActionRequest(models.Model):
     def is_pending(self) -> bool:
         return self.status == self.Status.SUBMITTED
 
-    def can_edit_authorized(self, user) -> bool:
-        """خامساً (المخولون بالعمليات) is editable until the request is decided,
-        by its creator, an approver or a superadmin."""
+    def _can_manage_pending(self, user) -> bool:
+        """Pending requests can be changed by their creator, an approver or a superadmin."""
         if not (self.is_pending and user.is_authenticated):
             return False
         return user.pk == self.created_by_id or getattr(user, "is_approver", False) or user.is_superuser
+
+    def can_edit_authorized(self, user) -> bool:
+        """خامساً (المخولون بالعمليات) is editable until the request is decided."""
+        return self._can_manage_pending(user)
+
+    def can_delete(self, user) -> bool:
+        """A request can be deleted only before it is approved/rejected."""
+        return self._can_manage_pending(user)
+
+    def delete_evidence_files(self) -> None:
+        """Remove the stored videos/screenshots of this request (called before deletion)."""
+        import shutil
+        from pathlib import Path
+
+        for link in self.links.all():
+            for f in (link.video_file, link.profile_screenshot, link.profile_videos_image):
+                if f:
+                    f.delete(save=False)
+        folder = Path(settings.MEDIA_ROOT) / "evidence" / f"request_{self.pk}"
+        shutil.rmtree(folder, ignore_errors=True)
 
     # --- workflow transitions ---
     def approve(self, user, note: str = "") -> None:

@@ -308,3 +308,74 @@ class SignatureLineTests(TestCase):
         self.assertIn('<span class="signature-line">..............................</span>'
                       '<span class="no-print">&nbsp;&nbsp;<b class="ltr">001</b></span><br>', after)
         self.assertNotIn("(001)", after)
+
+
+@override_settings(MEDIA_ROOT=TMP_MEDIA)
+class DeleteRequestTests(TestCase):
+    """Deleting a request: only before approval, by creator / approver / superadmin."""
+
+    def setUp(self):
+        from django.core.files.base import ContentFile
+        self.creator = User.objects.create_user("M100", password="x", role=User.Role.MONITOR)
+        self.other = User.objects.create_user("M200", password="x", role=User.Role.MONITOR)
+        self.boss = User.objects.create_user("A900", password="x", role=User.Role.APPROVER)
+        self.req = ActionRequest.objects.create(platforms=["tiktok"], actions=["block"], description="d",
+                                                monitor=self.creator, uploader=self.creator,
+                                                created_by=self.creator)
+        self.link = RequestLink.objects.create(request=self.req, url="https://www.tiktok.com/@a/video/1",
+                                               platform="tiktok")
+        self.link.video_file.save("v.mp4", ContentFile(b"video"), save=False)
+        self.link.profile_screenshot.save("p.png", ContentFile(PNG), save=False)
+        self.link.save()
+        self.files = [Path(self.link.video_file.path), Path(self.link.profile_screenshot.path)]
+        self.url = reverse("reports:delete", args=[self.req.pk])
+
+    def test_creator_confirms_then_deletes_with_files_and_audit(self):
+        from auditlog.models import LogEntry
+        self.client.force_login(self.creator)
+        self.assertContains(self.client.get(self.req.get_absolute_url()), self.url)
+        page = self.client.get(self.url)
+        self.assertContains(page, "حذف الطلب رقم")
+        self.assertContains(page, "2 ملف أدلة")
+        self.assertTrue(all(f.exists() for f in self.files))
+
+        resp = self.client.post(self.url)
+        self.assertRedirects(resp, reverse("reports:list"))
+        self.assertFalse(ActionRequest.objects.filter(pk=self.req.pk).exists())
+        self.assertFalse(RequestLink.objects.filter(pk=self.link.pk).exists())
+        self.assertFalse(any(f.exists() for f in self.files))
+        self.assertFalse((Path(TMP_MEDIA) / "evidence" / f"request_{self.req.pk}").exists())
+        entry = LogEntry.objects.filter(action=LogEntry.Action.DELETE, object_pk=str(self.req.pk),
+                                        content_type__model="actionrequest").get()
+        self.assertEqual(entry.actor, self.creator)
+
+    def test_other_user_cannot_delete(self):
+        self.client.force_login(self.other)
+        self.assertNotContains(self.client.get(self.req.get_absolute_url()), self.url)
+        resp = self.client.post(self.url)
+        self.assertRedirects(resp, self.req.get_absolute_url())
+        self.assertTrue(ActionRequest.objects.filter(pk=self.req.pk).exists())
+        self.assertTrue(all(f.exists() for f in self.files))
+
+    def test_no_delete_after_approval(self):
+        self.req.approve(self.boss)
+        self.client.force_login(self.boss)
+        self.assertNotContains(self.client.get(self.req.get_absolute_url()), self.url)
+        self.client.post(self.url)
+        self.assertTrue(ActionRequest.objects.filter(pk=self.req.pk).exists())
+
+    def test_approver_can_delete_pending(self):
+        self.client.force_login(self.boss)
+        self.client.post(self.url)
+        self.assertFalse(ActionRequest.objects.filter(pk=self.req.pk).exists())
+
+    def test_anonymous_redirected_to_login(self):
+        resp = self.client.post(self.url)
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/login/", resp["Location"])
+        self.assertTrue(ActionRequest.objects.filter(pk=self.req.pk).exists())
+
+    def test_list_rows_are_clickable(self):
+        self.client.force_login(self.creator)
+        html = self.client.get(reverse("reports:list")).content.decode()
+        self.assertIn(f'class="row-click" data-href="{self.req.get_absolute_url()}" tabindex="0"', html)

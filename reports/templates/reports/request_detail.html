@@ -10,6 +10,7 @@
   </div>
   <div class="actions">
     <a class="btn secondary" href="{% url 'reports:list' %}">رجوع</a>
+    {% if can_delete %}<a class="btn danger-outline" href="{% url 'reports:delete' object.pk %}">{% icon "trash" 17 %}حذف الطلب</a>{% endif %}
     <button class="btn secondary" onclick="window.print()">{% icon "print" 17 %}طباعة</button>
   </div>
 </div>
