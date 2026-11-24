@@ -48,6 +48,8 @@ UI_ICONS = {
     "x": '<path d="M6 6l12 12M18 6L6 18"/>',
     "clock": '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     "lock": ACTION_ICONS["lock"],
+    "arrow-right": '<path d="M5 12h14M13 6l6 6-6 6"/>',
+    "arrow-left": '<path d="M19 12H5M11 6l-6 6 6 6"/>',
     "trash": '<path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M9 7V4h6v3"/>',
     "alert": '<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/>',
 }

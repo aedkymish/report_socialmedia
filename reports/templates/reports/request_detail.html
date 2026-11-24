@@ -9,7 +9,14 @@
     <div class="sub">أُنشئ {{ object.created_at|date:"Y/m/d H:i" }} بواسطة <span class="ltr">{{ object.created_by.username }}</span></div>
   </div>
   <div class="actions">
-    <a class="btn secondary" href="{% url 'reports:list' %}">رجوع</a>
+    <nav class="pager" aria-label="التنقل بين الطلبات">
+      {% if nav.previous_url %}<a class="btn secondary" href="{{ nav.previous_url }}" rel="prev" id="nav-prev" title="الطلب السابق (→)">{% icon "arrow-right" 17 %}السابق</a>
+      {% else %}<span class="btn secondary disabled" aria-disabled="true">{% icon "arrow-right" 17 %}السابق</span>{% endif %}
+      <span class="pager-pos" title="{% if nav.filter.active %}ضمن نتائج البحث/التصفية{% endif %}">{{ nav.position }} من {{ nav.total }}</span>
+      {% if nav.next_url %}<a class="btn secondary" href="{{ nav.next_url }}" rel="next" id="nav-next" title="الطلب التالي (←)">التالي{% icon "arrow-left" 17 %}</a>
+      {% else %}<span class="btn secondary disabled" aria-disabled="true">التالي{% icon "arrow-left" 17 %}</span>{% endif %}
+    </nav>
+    <a class="btn secondary" href="{{ nav.list_url }}">{% icon "list" 17 %}رجوع للقائمة</a>
     {% if can_delete %}<a class="btn danger-outline" href="{% url 'reports:delete' object.pk %}">{% icon "trash" 17 %}حذف الطلب</a>{% endif %}
     <button class="btn secondary" onclick="window.print()">{% icon "print" 17 %}طباعة</button>
   </div>
@@ -22,7 +29,7 @@
     <div class="org">إدارة الشؤون الفنية — فريق الرصد والمتابعة الإلكترونية</div>
     <h1>نموذج طلب إجراء (حجب - قفل - حظر - توثيق) للصفحات والقنوات الرسمية</h1>
     <div class="meta">طلب رقم <b>{{ object.pk }}</b> <span class="badge b-{{ object.status }}">{{ object.get_status_display }}</span>
-      <span>{{ object.created_at|date:"Y/m/d H:i" }}</span></div>
+      <span class="no-print">{{ object.created_at|date:"Y/m/d H:i" }}</span><span class="print-only">{{ object.created_at|date:"Y/m/d" }}</span></div>
     </div>
     {% if branding_logo %}<div class="head-spacer"></div>{% endif %}
   </div>
@@ -166,4 +173,13 @@
   {% empty %}<p class="muted">لا توجد روابط.</p>
   {% endfor %}
 </div>
+<script>
+/* → previous, ← next (RTL reading order); ignored while typing or with modifier keys */
+document.addEventListener('keydown', function (e) {
+  if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  const t = e.target; if (t.closest && t.closest('input, textarea, select, [contenteditable], video')) return;
+  const link = e.key === 'ArrowRight' ? document.getElementById('nav-prev') : e.key === 'ArrowLeft' ? document.getElementById('nav-next') : null;
+  if (link) { e.preventDefault(); window.location.href = link.href; }
+});
+</script>
 {% endblock %}

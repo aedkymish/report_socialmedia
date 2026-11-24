@@ -13,7 +13,7 @@
 <div class="card">
   <form method="get" class="toolbar" role="search">
     {% icon "search" 18 %}
-    <input type="search" name="q" value="{{ request.GET.q }}" placeholder="بحث في الروابط أو الشرح أو الكود" class="grow" aria-label="بحث">
+    <input type="search" name="q" value="{{ request.GET.q }}" placeholder="بحث برقم الطلب أو الرابط أو الشرح أو الكود" class="grow" aria-label="بحث">
     <select name="status" aria-label="الحالة">
       <option value="">كل الحالات</option>
       {% for v, l in statuses %}<option value="{{ v }}" {% if request.GET.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
@@ -27,8 +27,8 @@
     <thead><tr><th>#</th><th>المنصات</th><th>الإجراء</th><th class="num">الروابط</th><th>مسؤول الرصد</th><th>الحالة</th><th>التاريخ</th></tr></thead>
     <tbody>
     {% for r in object_list %}
-    <tr class="row-click" data-href="{{ r.get_absolute_url }}" tabindex="0" aria-label="فتح الطلب رقم {{ r.pk }}">
-      <td><a class="row-link" href="{{ r.get_absolute_url }}">{{ r.pk }}</a></td>
+    <tr class="row-click" data-href="{{ r.get_absolute_url }}{{ filter_qs }}" tabindex="0" aria-label="فتح الطلب رقم {{ r.pk }}">
+      <td><a class="row-link" href="{{ r.get_absolute_url }}{{ filter_qs }}">{{ r.pk }}</a></td>
       <td>{% platforms r.platforms %}</td>
       <td>{% actions r.actions %}</td>
       <td class="num">{{ r.link_count }}{% if r.video_count %} <span class="muted small">· {{ r.video_count }} {% icon "video" 14 %}</span>{% endif %}</td>

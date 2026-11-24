@@ -16,6 +16,8 @@ from django.views.generic import TemplateView
 
 from .forms import ActionRequestForm, AuthorizedPersonsForm, DecisionForm
 from .services.pdf import PdfRenderer, app_css, embedded_font_css, report_logo_data_uri, resolve_report_logo
+from .navigation import ORDERING as NAV_ORDERING
+from .navigation import RequestListFilter, RequestNavigator
 from .services.url_normalizer import normalize_url
 from .reporting import FORM_PLATFORMS, ReportBuilder, ReportCsvExporter, ReportFilter
 from .models import ActionRequest, ActionType, RequestLink
@@ -34,22 +36,15 @@ class RequestListView(LoginRequiredMixin, ListView):
                 link_count=Count("links"),
                 video_count=Count("links", filter=Q(links__is_video=True)),
             )
-            .order_by("-created_at")
+            .order_by(*NAV_ORDERING)
         )
-        status = self.request.GET.get("status")
-        if status in ActionRequest.Status.values:
-            qs = qs.filter(status=status)
-        q = self.request.GET.get("q", "").strip()
-        if q:
-            qs = qs.filter(
-                Q(description__icontains=q) | Q(links__url__icontains=q)
-                | Q(monitor__username=q) | Q(uploader__username=q) | Q(platform_contact_code=q)
-            ).distinct()
-        return qs
+        self.list_filter = RequestListFilter.from_params(self.request.GET)
+        return self.list_filter.apply(qs, ordered=True)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["statuses"] = ActionRequest.Status.choices
+        ctx["filter_qs"] = self.list_filter.querystring()  # carried into each row's link
         return ctx
 
 
@@ -100,6 +95,7 @@ class RequestDetailView(LoginRequiredMixin, DetailView):
         ctx["decision_form"] = DecisionForm()
         ctx["can_edit_authorized"] = self.object.can_edit_authorized(self.request.user)
         ctx["can_delete"] = self.object.can_delete(self.request.user)
+        ctx["nav"] = RequestNavigator(self.object, RequestListFilter.from_params(self.request.GET))
         if ctx["can_edit_authorized"]:
             ctx["authorized_form"] = kwargs.get("authorized_form") or AuthorizedPersonsForm(
                 initial={"monitor": self.object.monitor.username, "uploader": self.object.uploader.username})
