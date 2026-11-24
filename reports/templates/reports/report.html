@@ -1,40 +1,48 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}التقارير{% endblock %}
-{% block head %}
-{% include "reports/_report_styles.html" %}
-{% endblock %}
 {% block content %}
 {% with f=result.filter %}
+<div class="page-head no-print">
+  <div>
+    <h1>التقارير</h1>
+    <div class="sub">حسب الفترة والمنصة ونوع الإجراء والحالة.</div>
+  </div>
+  <div class="actions">
+    <a class="btn secondary" href="?{{ query }}&export=pdf">{% icon "download" 17 %}PDF</a>
+    <a class="btn secondary" href="?{{ query }}&export=csv">{% icon "download" 17 %}Excel (CSV)</a>
+    <button type="button" class="btn secondary" onclick="window.print()">{% icon "print" 17 %}طباعة</button>
+  </div>
+</div>
+
 <div class="card no-print">
-  <h1>التقارير</h1>
   <form method="get">
     <div class="report-filters">
       <fieldset>
         <legend>الفترة</legend>
-        <label>من <input type="date" name="from" value="{{ f.date_from|date:'Y-m-d' }}"></label>
-        <label>إلى <input type="date" name="to" value="{{ f.date_to|date:'Y-m-d' }}"></label>
+        <div class="date-pair">
+          <label>من<input type="date" name="from" value="{{ f.date_from|date:'Y-m-d' }}"></label>
+          <label>إلى<input type="date" name="to" value="{{ f.date_to|date:'Y-m-d' }}"></label>
+        </div>
       </fieldset>
       <fieldset>
-        <legend>المنصة <span class="muted">(بدون اختيار = الكل)</span></legend>
-        <div class="chips">{% for v, l in platforms %}
-          <label><input type="checkbox" name="platform" value="{{ v }}" {% if v in f.platforms %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
+        <legend>المنصة <span class="muted small">(بدون اختيار = الكل)</span></legend>
+        <div class="choices compact">{% for v, l in platforms %}
+          <label class="choice"><input type="checkbox" name="platform" value="{{ v }}" {% if v in f.platforms %}checked{% endif %}>{% platform_icon v 17 %}<span>{{ l }}</span></label>{% endfor %}</div>
       </fieldset>
       <fieldset>
         <legend>نوع الإجراء</legend>
-        <div class="chips">{% for v, l in actions %}
-          <label><input type="checkbox" name="action" value="{{ v }}" {% if v in f.actions %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
+        <div class="choices compact">{% for v, l in actions %}
+          <label class="choice"><input type="checkbox" name="action" value="{{ v }}" {% if v in f.actions %}checked{% endif %}>{% action_icon v 17 %}<span>{{ l }}</span></label>{% endfor %}</div>
       </fieldset>
       <fieldset>
         <legend>الحالة</legend>
-        <div class="chips">{% for v, l in statuses %}
-          <label><input type="checkbox" name="status" value="{{ v }}" {% if v in f.statuses %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
+        <div class="choices compact">{% for v, l in statuses %}
+          <label class="choice"><input type="checkbox" name="status" value="{{ v }}" {% if v in f.statuses %}checked{% endif %}><span>{{ l }}</span></label>{% endfor %}</div>
       </fieldset>
     </div>
-    <div class="report-actions" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn">عرض التقرير</button>
-      <a class="btn secondary" href="?{{ query }}&export=pdf">تصدير PDF</a>
-      <a class="btn secondary" href="?{{ query }}&export=csv">تصدير Excel (CSV)</a>
-      <button type="button" class="btn secondary" onclick="window.print()">طباعة</button>
+    <div class="btn-row report-actions" style="margin-top:16px">
+      <button class="btn">{% icon "chart" 17 %}عرض التقرير</button>
       <a class="btn secondary" href="{% url 'reports:report' %}">إعادة تعيين</a>
     </div>
   </form>

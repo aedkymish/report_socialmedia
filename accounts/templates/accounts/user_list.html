@@ -1,40 +1,47 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}إدارة المستخدمين{% endblock %}
 {% block content %}
-<div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+<div class="page-head">
+  <div>
     <h1>إدارة المستخدمين</h1>
-    <a class="btn" href="{% url 'accounts:create' %}">+ مستخدم جديد</a>
+    <div class="sub">الكود هو اسم المستخدم الذي يُدخل في النموذج وفي تسجيل الدخول.</div>
   </div>
-  <form method="get" class="filters">
-    <input type="text" name="q" value="{{ request.GET.q }}" placeholder="بحث بالكود أو الاسم" style="flex:1;min-width:180px">
-    <select name="role" style="width:auto">
+  <div class="actions"><a class="btn" href="{% url 'accounts:create' %}">{% icon "plus" 18 %}مستخدم جديد</a></div>
+</div>
+<div class="card">
+  <form method="get" class="toolbar">
+    {% icon "search" 18 %}
+    <input type="search" name="q" value="{{ request.GET.q }}" placeholder="بحث بالكود أو الاسم" class="grow" aria-label="بحث">
+    <select name="role" aria-label="الصفة">
       <option value="">كل الصفات</option>
       {% for v, l in roles %}<option value="{{ v }}" {% if request.GET.role == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
     </select>
-    <select name="active" style="width:auto">
+    <select name="active" aria-label="الحالة">
       <option value="">الكل</option>
       <option value="1" {% if request.GET.active == "1" %}selected{% endif %}>مفعّل</option>
       <option value="0" {% if request.GET.active == "0" %}selected{% endif %}>معطّل</option>
     </select>
     <button class="btn secondary">تصفية</button>
   </form>
-  <div style="overflow-x:auto">
+  <div class="table-wrap">
   <table>
-    <tr><th>الكود</th><th>الاسم</th><th>الصفة</th><th>الحالة</th><th>آخر دخول</th><th></th></tr>
+    <thead><tr><th>الكود</th><th>الاسم</th><th>الصفة</th><th>الحالة</th><th>آخر دخول</th><th></th></tr></thead>
+    <tbody>
     {% for u in object_list %}
     <tr>
-      <td class="ltr" style="white-space:nowrap"><b>{{ u.username }}</b></td>
-      <td>{{ u.full_name }}</td>
+      <td class="ltr mono" style="white-space:nowrap"><b>{{ u.username }}</b></td>
+      <td>{{ u.full_name|default:"—" }}</td>
       <td>{{ u.get_role_display }}{% if u.is_superuser %} <span class="badge b-approved">مدير النظام</span>{% endif %}</td>
       <td>{% if u.is_active %}<span class="badge b-done">مفعّل</span>{% else %}<span class="badge b-rejected">معطّل</span>{% endif %}</td>
-      <td>{{ u.last_login|date:"Y/m/d H:i"|default:"—" }}</td>
+      <td class="muted small">{{ u.last_login|date:"Y/m/d H:i"|default:"—" }}</td>
       <td style="white-space:nowrap">
-        <a class="btn small secondary" href="{% url 'accounts:edit' u.pk %}">تعديل</a>
-        <a class="btn small secondary" href="{% url 'accounts:password' u.pk %}">كلمة المرور</a>
+        <a class="btn small secondary" href="{% url 'accounts:edit' u.pk %}">{% icon "edit" 14 %}تعديل</a>
+        <a class="btn small secondary" href="{% url 'accounts:password' u.pk %}">{% icon "key" 14 %}كلمة المرور</a>
       </td>
     </tr>
-    {% empty %}<tr><td colspan="6" class="muted">لا يوجد مستخدمون.</td></tr>{% endfor %}
+    {% empty %}<tr><td colspan="6" class="empty">لا يوجد مستخدمون.</td></tr>{% endfor %}
+    </tbody>
   </table>
   </div>
   {% include "_pagination.html" %}

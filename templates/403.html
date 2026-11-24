@@ -1,9 +1,13 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}غير مصرح{% endblock %}
 {% block content %}
-<div class="card" style="max-width:520px;margin:40px auto;text-align:center">
-  <h1>غير مصرح بالدخول</h1>
-  <p class="muted">هذه الصفحة متاحة لمدير النظام (Superadmin) فقط.</p>
-  <a class="btn" href="{% url 'reports:list' %}">العودة إلى الطلبات</a>
+<div class="auth-wrap">
+  <div class="card auth-card" style="text-align:center">
+    <div class="logo"><span class="brand-mark" style="width:64px;height:64px;border-radius:16px;background:var(--bad-bg);color:var(--bad)">{% icon "lock" 32 %}</span></div>
+    <h1>غير مصرح بالدخول</h1>
+    <p class="sub">هذه الصفحة متاحة لمدير النظام (Superadmin) فقط.</p>
+    <a class="btn" href="{% url 'reports:list' %}">العودة إلى الطلبات</a>
+  </div>
 </div>
 {% endblock %}

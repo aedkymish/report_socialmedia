@@ -16,8 +16,15 @@ def audit_changes(entry):
             old, new = value
         else:
             old, new = "", value
-        rows.append((field, "" if old in (None, "None") else old, "" if new in (None, "None") else new))
+        old = "" if old in (None, "None") else old
+        new = "" if new in (None, "None") else new
+        if old == "" and new == "":
+            continue  # empty field on creation: nothing to show
+        rows.append((FIELD_LABELS.get(field, field), old, new))
     return rows
+
+
+FIELD_LABELS = {"ID": "المعرّف", "id": "المعرّف"}
 
 
 @register.filter

@@ -1,124 +1,168 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}طلب رقم {{ object.pk }}{% endblock %}
 {% block head %}{% if processing %}<meta http-equiv="refresh" content="8">{% endif %}{% endblock %}
 {% block content %}
+<div class="page-head no-print">
+  <div>
+    <h1>طلب رقم {{ object.pk }} <span class="badge b-{{ object.status }}" style="vertical-align:middle">{{ object.get_status_display }}</span></h1>
+    <div class="sub">أُنشئ {{ object.created_at|date:"Y/m/d H:i" }} بواسطة <span class="ltr">{{ object.created_by.username }}</span></div>
+  </div>
+  <div class="actions">
+    <a class="btn secondary" href="{% url 'reports:list' %}">رجوع</a>
+    <button class="btn secondary" onclick="window.print()">{% icon "print" 17 %}طباعة</button>
+  </div>
+</div>
+
 <div class="card">
   <div class="form-head{% if branding_logo %} with-logo{% endif %}">
     {% if branding_logo %}<div class="head-logo"><img src="{% url 'reports:logo' %}" alt="شعار المؤسسة" style="max-height:{{ branding_logo_height }}px"></div>{% endif %}
     <div class="head-text">
-    <div class="muted">إدارة الشؤون الفنية — فريق الرصد والمتابعة الإلكترونية</div>
+    <div class="org">إدارة الشؤون الفنية — فريق الرصد والمتابعة الإلكترونية</div>
     <h1>نموذج طلب إجراء (حجب - قفل - حظر - توثيق) للصفحات والقنوات الرسمية</h1>
-    <div>طلب رقم <b>{{ object.pk }}</b> — <span class="badge b-{{ object.status }}">{{ object.get_status_display }}</span>
-      — {{ object.created_at|date:"Y/m/d H:i" }}</div>
+    <div class="meta">طلب رقم <b>{{ object.pk }}</b> <span class="badge b-{{ object.status }}">{{ object.get_status_display }}</span>
+      <span>{{ object.created_at|date:"Y/m/d H:i" }}</span></div>
     </div>
     {% if branding_logo %}<div class="head-spacer"></div>{% endif %}
   </div>
-  <div class="no-print" style="text-align:left;margin-bottom:10px"><button class="btn small secondary" onclick="window.print()">طباعة</button></div>
 
-  <h2>أولاً: المنصات المستهدفة</h2>
-  <p>{% for p in object.platform_labels %}☑ {{ p }}&nbsp;&nbsp; {% endfor %}</p>
+  <section class="section">
+    <h2 class="section-title"><span class="num">أولاً</span>المنصات المستهدفة</h2>
+    {% platforms object.platforms 18 %}
+  </section>
 
-  <h2>ثانياً: نوع الإجراء المطلوب</h2>
-  <p>{% for a in object.action_labels %}☑ {{ a }}&nbsp;&nbsp; {% endfor %}</p>
+  <section class="section">
+    <h2 class="section-title"><span class="num">ثانياً</span>نوع الإجراء المطلوب</h2>
+    {% actions object.actions 18 %}
+  </section>
 
-  <h2>رابعاً: شرح مبسط عن الحالة / سبب الطلب</h2>
-  <p style="white-space:pre-line">{{ object.description }}</p>
-
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-    <h2 style="margin:0">خامساً: المخولون بالعمليات</h2>
-    {% if can_edit_authorized %}<button type="button" class="btn small secondary no-print" id="edit-authorized-btn"
-      onclick="document.getElementById('edit-authorized').hidden=false;this.hidden=true">تعديل</button>{% endif %}
-  </div>
-  {% if can_edit_authorized %}
-  <form method="post" action="{% url 'reports:authorized' object.pk %}" id="edit-authorized" class="no-print"
-        style="border:1px solid var(--line);border-radius:8px;padding:12px;margin:10px 0" {% if not edit_open %}hidden{% endif %}>
-    {% csrf_token %}
-    {{ authorized_form.non_field_errors }}
-    <div class="grid3">
-      <div>{% include "reports/_field.html" with f=authorized_form.monitor %}</div>
-      <div>{% include "reports/_field.html" with f=authorized_form.uploader %}</div>
-      <div class="field"><label>3. مسؤول المنصة (نقطة الاتصال) - الكود</label>
-        <input type="text" value="{{ object.platform_contact_code }}" dir="ltr" readonly style="background:#eef2f5"></div>
+  <section class="section">
+    <h2 class="section-title"><span class="num">ثالثاً</span>رابط الصفحة أو القناة المراد العمل عليها <span class="hint">({{ links|length }})</span></h2>
+    <div class="table-wrap">
+    <table>
+      {% for link in links %}
+      <tr><td class="num" style="width:44px">{{ forloop.counter }}</td>
+          <td style="width:40px">{% platform_icon link.platform 18 %}</td>
+          <td class="ltr" style="word-break:break-all">{{ link.url }}</td></tr>
+      {% endfor %}
+    </table>
     </div>
-    <datalist id="user-codes">{% for u in users %}<option value="{{ u.username }}">{{ u.full_name }} — {{ u.get_role_display }}</option>{% endfor %}</datalist>
-    <button class="btn">حفظ التعديل</button>
-    <button type="button" class="btn secondary" onclick="this.form.hidden=true;document.getElementById('edit-authorized-btn').hidden=false">إلغاء</button>
-    <span class="muted" style="font-size:.85rem">يمكن التعديل حتى اعتماد الطلب أو رفضه، ويُسجَّل كل تعديل في سجل التدقيق.</span>
-  </form>
-  {% if edit_open %}<script>document.getElementById('edit-authorized-btn').hidden = true;</script>{% endif %}
-  {% elif not object.is_pending %}<p class="muted no-print" style="font-size:.85rem;margin:6px 0">🔒 لا يمكن تعديل المخولين بعد اعتماد الطلب أو رفضه.</p>{% endif %}
-  <table>
-    <tr><th>الصفة</th><th>الكود</th><th>الاسم</th><th>المهمة</th></tr>
-    <tr><td>1. مسؤول الرصد</td><td class="ltr">{{ object.monitor.username }}</td><td>{{ object.monitor.full_name }}</td><td>مسؤول عن الرصد والمتابعة الإلكترونية</td></tr>
-    <tr><td>2. المسؤول عن التحميل في القناة</td><td class="ltr">{{ object.uploader.username }}</td><td>{{ object.uploader.full_name }}</td><td>مسؤول عن رفع الأدلة والبيانات</td></tr>
-    <tr><td>3. مسؤول المنصة (نقطة الاتصال)</td><td class="ltr">{{ object.platform_contact_code }}</td><td class="muted">كود ثابت</td><td>الكود الثابت لنقطة الاتصال الخارجية</td></tr>
-  </table>
+  </section>
 
-  <h2 style="margin-top:16px">سادساً: التوقيع والاعتماد الرسمي</h2>
-  <p>{% if object.declaration_accepted %}☑{% else %}☐{% endif %} أقر أنا المسؤول المعتمد بصحة البيانات الواردة في هذا النموذج وبعد مراجعة كافة الشروط<br>
-     {% if object.consent_accepted %}☑{% else %}☐{% endif %} أوافق على اتخاذ الإجراءات اللازمة عبر المنصة رسمياً</p>
-  <p>✱ اسم المسؤول المعتمد: <b>{{ object.approver_name }}</b><br>
-     ✱ التوقيع الرسمي: <span class="signature-line">..............................</span>{% if object.approved_by %}<span class="no-print">&nbsp;&nbsp;<b class="ltr">{{ object.approved_by.username }}</b></span>{% endif %}<br>
-     ✱ التاريخ: {% if object.approved_at %}{{ object.approved_at|date:"Y/m/d" }} م{% else %}____/____/____{% endif %}</p>
-  {% if object.review_note %}<p class="muted">ملاحظات: {{ object.review_note }}</p>{% endif %}
+  <section class="section">
+    <h2 class="section-title"><span class="num">رابعاً</span>شرح مبسط عن الحالة / سبب الطلب</h2>
+    <div class="prose">{{ object.description }}</div>
+  </section>
 
-  {% if can_decide %}
-  <form method="post" action="{% url 'reports:decision' object.pk %}" class="no-print" style="border-top:1px solid var(--line);padding-top:12px">{% csrf_token %}
-    <div class="field"><label>ملاحظات الاعتماد</label>{{ decision_form.note }}</div>
-    <button class="btn" name="decision" value="approve">اعتماد وتوقيع</button>
-    <button class="btn danger" name="decision" value="reject">رفض</button>
-  </form>
-  {% endif %}
+  <section class="section">
+    <h2 class="section-title"><span class="num">خامساً</span>المخولون بالعمليات
+      {% if can_edit_authorized %}<span class="section-actions"><button type="button" class="btn small secondary no-print" id="edit-authorized-btn"
+        onclick="document.getElementById('edit-authorized').hidden=false;this.hidden=true">{% icon "edit" 15 %}تعديل</button></span>{% endif %}
+    </h2>
+    {% if can_edit_authorized %}
+    <form method="post" action="{% url 'reports:authorized' object.pk %}" id="edit-authorized" class="no-print inline-edit" {% if not edit_open %}hidden{% endif %}>
+      {% csrf_token %}
+      {{ authorized_form.non_field_errors }}
+      <div class="grid3">
+        <div>{% include "reports/_field.html" with f=authorized_form.monitor %}</div>
+        <div>{% include "reports/_field.html" with f=authorized_form.uploader %}</div>
+        <div class="field"><label>3. مسؤول المنصة (نقطة الاتصال) - الكود</label>
+          <input type="text" value="{{ object.platform_contact_code }}" dir="ltr" readonly></div>
+      </div>
+      <datalist id="user-codes">{% for u in users %}<option value="{{ u.username }}">{{ u.full_name }} — {{ u.get_role_display }}</option>{% endfor %}</datalist>
+      <div class="btn-row">
+        <button class="btn">حفظ التعديل</button>
+        <button type="button" class="btn secondary" onclick="this.form.hidden=true;document.getElementById('edit-authorized-btn').hidden=false">إلغاء</button>
+        <span class="help">يمكن التعديل حتى اعتماد الطلب أو رفضه، ويُسجَّل كل تعديل في سجل التدقيق.</span>
+      </div>
+    </form>
+    {% if edit_open %}<script>document.getElementById('edit-authorized-btn').hidden = true;</script>{% endif %}
+    {% elif not object.is_pending %}<div class="notice locked no-print">{% icon "lock" 16 %}لا يمكن تعديل المخولين بعد اعتماد الطلب أو رفضه.</div>{% endif %}
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>الصفة</th><th>الكود</th><th>الاسم</th><th>المهمة</th></tr></thead>
+      <tbody>
+      <tr><td>1. مسؤول الرصد</td><td class="ltr mono"><b>{{ object.monitor.username }}</b></td><td>{{ object.monitor.full_name }}</td><td class="muted">مسؤول عن الرصد والمتابعة الإلكترونية</td></tr>
+      <tr><td>2. المسؤول عن التحميل في القناة</td><td class="ltr mono"><b>{{ object.uploader.username }}</b></td><td>{{ object.uploader.full_name }}</td><td class="muted">مسؤول عن رفع الأدلة والبيانات</td></tr>
+      <tr><td>3. مسؤول المنصة (نقطة الاتصال)</td><td class="ltr mono"><b>{{ object.platform_contact_code }}</b></td><td class="muted">كود ثابت</td><td class="muted">الكود الثابت لنقطة الاتصال الخارجية</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title"><span class="num">سادساً</span>التوقيع والاعتماد الرسمي</h2>
+    <div class="declarations">
+      <div>{% if object.declaration_accepted %}☑{% else %}☐{% endif %} <span>أقر أنا المسؤول المعتمد بصحة البيانات الواردة في هذا النموذج وبعد مراجعة كافة الشروط</span></div>
+      <div>{% if object.consent_accepted %}☑{% else %}☐{% endif %} <span>أوافق على اتخاذ الإجراءات اللازمة عبر المنصة رسمياً</span></div>
+    </div>
+    <p>✱ اسم المسؤول المعتمد: <b>{{ object.approver_name }}</b><br>
+       ✱ التوقيع الرسمي: <span class="signature-line">..............................</span>{% if object.approved_by %}<span class="no-print">&nbsp;&nbsp;<b class="ltr">{{ object.approved_by.username }}</b></span>{% endif %}<br>
+       ✱ التاريخ: {% if object.approved_at %}{{ object.approved_at|date:"Y/m/d" }} م{% else %}____/____/____{% endif %}</p>
+    {% if object.review_note %}<p class="muted">ملاحظات: {{ object.review_note }}</p>{% endif %}
+
+    {% if can_decide %}
+    <form method="post" action="{% url 'reports:decision' object.pk %}" class="no-print decision">{% csrf_token %}
+      <div class="field"><label for="{{ decision_form.note.id_for_label }}">ملاحظات الاعتماد (اختياري)</label>{{ decision_form.note }}</div>
+      <div class="btn-row">
+        <button class="btn success" name="decision" value="approve">{% icon "check" 17 %}اعتماد وتوقيع</button>
+        <button class="btn danger" name="decision" value="reject">{% icon "x" 17 %}رفض</button>
+      </div>
+    </form>
+    {% endif %}
+  </section>
 </div>
 
 <div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-    <h2 style="margin:0">ثالثاً: الروابط والأدلة الرقمية</h2>
+  <div class="card-head">
+    <h2>الأدلة الرقمية</h2>
     <form method="post" action="{% url 'reports:retry' object.pk %}" class="no-print">{% csrf_token %}
-      <button class="btn small secondary">إعادة معالجة غير المكتمل</button></form>
+      <button class="btn small secondary">{% icon "refresh" 15 %}إعادة معالجة غير المكتمل</button></form>
   </div>
-  {% if processing %}<p class="muted no-print">⏳ جارٍ تحميل الفيديوهات وتصوير الصفحات… تُحدَّث الصفحة تلقائياً.</p>{% endif %}
+  {% if processing %}<div class="notice no-print">{% icon "clock" 17 %}جارٍ تحميل الفيديوهات وتصوير الصفحات… تُحدَّث الصفحة تلقائياً.</div>{% endif %}
 
   {% for link in links %}
-  <div style="border-top:1px solid var(--line);padding:12px 0">
-    <div>
-      <b>{{ forloop.counter }}.</b>
-      <a class="ltr" href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.url }}</a>
-      <span class="badge">{{ link.get_platform_display }}</span>
-      {% if link.is_video %}<span class="badge">🎬 فيديو</span>{% endif %}
-      <span class="badge b-{{ link.evidence_status }}">{{ link.get_evidence_status_display }}</span>
+  <article class="link-card">
+    <div class="link-card-head">
+      <span class="link-index">{{ forloop.counter }}</span>
+      <span class="tag">{% platform_icon link.platform 16 %}<span>{{ link.get_platform_display }}</span></span>
+      <a class="ltr link-url" href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.url }}</a>
+      <span class="link-meta">
+        {% if link.is_video %}<span class="badge plain">{% icon "video" 14 %}فيديو</span>{% endif %}
+        <span class="badge b-{{ link.evidence_status }}">{{ link.get_evidence_status_display }}</span>
+      </span>
     </div>
-    {% if link.profile_url %}<div class="muted">الصفحة الشخصية: <a class="ltr" href="{{ link.profile_url }}" target="_blank" rel="noopener noreferrer">{{ link.profile_url }}</a></div>{% endif %}
+    {% if link.profile_url %}<div class="profile-line">{% icon "users" 14 %}الصفحة الشخصية: <a class="ltr" href="{{ link.profile_url }}" target="_blank" rel="noopener noreferrer">{{ link.profile_url }}</a></div>{% endif %}
     <div class="evidence">
       {% if link.video_file %}
-      <div>
-        <div class="muted">الفيديو المحمَّل {% if link.video_title %}— {{ link.video_title }}{% endif %}</div>
-        <video controls preload="metadata" src="{{ link.video_file.url }}"></video>
-        <div class="no-print"><a href="{{ link.video_file.url }}" download>تنزيل الفيديو</a></div>
-        <div class="muted ltr" style="font-size:.75rem">SHA-256: {{ link.video_sha256 }}</div>
-      </div>
+      <figure>
+        <figcaption>{% icon "video" 15 %}الفيديو المحمَّل{% if link.video_title %} — <span class="muted">{{ link.video_title|truncatechars:60 }}</span>{% endif %}</figcaption>
+        <div class="media"><video controls preload="metadata" src="{{ link.video_file.url }}"></video></div>
+        <div class="foot"><a class="no-print" href="{{ link.video_file.url }}" download>{% icon "download" 14 %} تنزيل الفيديو</a><span class="hash">SHA-256: {{ link.video_sha256 }}</span></div>
+      </figure>
       {% endif %}
       {% if link.profile_screenshot %}
-      <div>
-        <div class="muted">صورة الصفحة الشخصية</div>
-        <a href="{{ link.profile_screenshot.url }}" target="_blank"><img src="{{ link.profile_screenshot.url }}" alt="صورة الصفحة الشخصية"></a>
-        <div class="muted ltr" style="font-size:.75rem">SHA-256: {{ link.screenshot_sha256 }}</div>
-      </div>
+      <figure>
+        <figcaption>{% icon "image" 15 %}صورة الصفحة الشخصية</figcaption>
+        <div class="media light"><a href="{{ link.profile_screenshot.url }}" target="_blank"><img src="{{ link.profile_screenshot.url }}" alt="صورة الصفحة الشخصية"></a></div>
+        <div class="foot"><span class="hash">SHA-256: {{ link.screenshot_sha256 }}</span></div>
+      </figure>
       {% endif %}
       {% if link.profile_videos_image %}
-      <div>
-        <div class="muted">قائمة فيديوهات الحساب (مستخرجة آلياً)</div>
-        <a href="{{ link.profile_videos_image.url }}" target="_blank"><img src="{{ link.profile_videos_image.url }}" alt="قائمة فيديوهات الحساب"></a>
-        <div class="muted ltr" style="font-size:.75rem">SHA-256: {{ link.profile_videos_sha256 }}</div>
-      </div>
+      <figure>
+        <figcaption>{% icon "list" 15 %}قائمة فيديوهات الحساب (مستخرجة آلياً)</figcaption>
+        <div class="media light"><a href="{{ link.profile_videos_image.url }}" target="_blank"><img src="{{ link.profile_videos_image.url }}" alt="قائمة فيديوهات الحساب"></a></div>
+        <div class="foot"><span class="hash">SHA-256: {{ link.profile_videos_sha256 }}</span></div>
+      </figure>
       {% endif %}
     </div>
-    {% if link.evidence_log %}<details class="no-print"><summary class="muted">سجل المعالجة</summary><pre class="log">{{ link.evidence_log }}</pre></details>{% endif %}
+    {% if link.evidence_log %}<details class="log no-print"><summary>سجل المعالجة</summary><pre class="log">{{ link.evidence_log }}</pre></details>{% endif %}
     {% if link.evidence_status == "failed" or link.evidence_status == "partial" %}
-    <form method="post" action="{% url 'reports:retry' object.pk %}" class="no-print" style="margin-top:6px">{% csrf_token %}
-      <input type="hidden" name="link" value="{{ link.pk }}"><button class="btn small secondary">إعادة المحاولة</button></form>
+    <form method="post" action="{% url 'reports:retry' object.pk %}" class="no-print" style="margin-top:10px">{% csrf_token %}
+      <input type="hidden" name="link" value="{{ link.pk }}"><button class="btn small secondary">{% icon "refresh" 15 %}إعادة المحاولة</button></form>
     {% endif %}
-  </div>
+  </article>
+  {% empty %}<p class="muted">لا توجد روابط.</p>
   {% endfor %}
 </div>
 {% endblock %}

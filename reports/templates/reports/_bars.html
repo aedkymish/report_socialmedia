@@ -1,7 +1,7 @@
-<div class="bars" role="table" aria-label="{{ title }}">
+{% load ui %}<div class="bars" role="table" aria-label="{{ title }}">
   {% for b in bars %}
   <div class="bar-row" role="row" title="{{ b.label }}: {{ b.count }}">
-    <span class="bar-label" role="cell">{{ b.label }}</span>
+    <span class="bar-label" role="cell">{% if kind == "platform" %}{% platform_icon b.key 16 %}{% elif kind == "action" %}{% action_icon b.key 16 %}{% endif %}{{ b.label }}</span>
     <span class="bar-track" role="cell"><span class="bar-fill" style="width:{{ b.pct|floatformat:1 }}%"></span></span>
     <span class="bar-value" role="cell">{{ b.count }}</span>
   </div>

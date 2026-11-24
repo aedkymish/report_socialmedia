@@ -1,13 +1,14 @@
-<div class="card">
+{% load ui %}<div class="card">
   <div class="form-head{% if logo %} with-logo{% endif %}">
     {% if logo %}<div class="head-logo"><img src="{{ logo }}" alt="شعار المؤسسة" style="max-height:{{ logo_height }}px"></div>{% endif %}
     <div class="head-text">
-    <div class="muted">إدارة الشؤون الفنية — فريق الرصد والمتابعة الإلكترونية</div>
+    <div class="org">إدارة الشؤون الفنية — فريق الرصد والمتابعة الإلكترونية</div>
     <h1>تقرير طلبات الإجراء</h1>
-    <div>من <b>{{ f.date_from|date:"Y/m/d" }}</b> إلى <b>{{ f.date_to|date:"Y/m/d" }}</b> ({{ f.days }} يوم)
-      {% if f.platforms %} — المنصات: {% for b in result.by_platform %}{{ b.label }}{% if not forloop.last %}، {% endif %}{% endfor %}{% endif %}
-      {% if f.actions %} — الإجراءات: {% for b in result.by_action %}{{ b.label }}{% if not forloop.last %}، {% endif %}{% endfor %}{% endif %}
-    </div>
+    <div class="meta">من <b>{{ f.date_from|date:"Y/m/d" }}</b> إلى <b>{{ f.date_to|date:"Y/m/d" }}</b> ({{ f.days }} يوم)</div>
+    {% if f.platforms or f.actions %}<div class="meta" style="margin-top:6px">
+      {% if f.platforms %}{% platforms f.platforms 14 %}{% endif %}
+      {% if f.actions %}{% actions f.actions 14 %}{% endif %}
+    </div>{% endif %}
     {% if pdf %}<div class="muted" style="font-size:.8rem;margin-top:4px">أُعدّ بواسطة <span class="ltr">{{ request.user.username }}</span> بتاريخ {% now "Y/m/d H:i" %}</div>{% endif %}
     </div>
     {% if logo %}<div class="head-spacer"></div>{% endif %}
@@ -21,33 +22,33 @@
     <div class="tile"><div class="num">{% if result.approval_rate is not None %}{{ result.approval_rate }}%{% else %}—{% endif %}</div><div class="lbl">نسبة الاعتماد من الطلبات المبتوت فيها</div></div>
   </div>
 
-  <div class="charts" style="margin-top:18px">
-    <div><h2>الطلبات حسب المنصة</h2>{% include "reports/_bars.html" with bars=result.by_platform title="الطلبات حسب المنصة" %}</div>
-    <div><h2>الطلبات حسب نوع الإجراء</h2>{% include "reports/_bars.html" with bars=result.by_action title="الطلبات حسب نوع الإجراء" %}</div>
-    <div><h2>الطلبات حسب الحالة</h2>{% include "reports/_bars.html" with bars=result.by_status title="الطلبات حسب الحالة" %}</div>
-    <div><h2>الروابط حسب المنصة</h2>{% include "reports/_bars.html" with bars=result.links_by_platform title="الروابط حسب المنصة" %}</div>
+  <div class="charts">
+    <div class="chart"><h3>الطلبات حسب المنصة</h3>{% include "reports/_bars.html" with bars=result.by_platform title="الطلبات حسب المنصة" kind="platform" %}</div>
+    <div class="chart"><h3>الطلبات حسب نوع الإجراء</h3>{% include "reports/_bars.html" with bars=result.by_action title="الطلبات حسب نوع الإجراء" kind="action" %}</div>
+    <div class="chart"><h3>الطلبات حسب الحالة</h3>{% include "reports/_bars.html" with bars=result.by_status title="الطلبات حسب الحالة" kind="status" %}</div>
+    <div class="chart"><h3>الروابط حسب المنصة</h3>{% include "reports/_bars.html" with bars=result.links_by_platform title="الروابط حسب المنصة" kind="platform" %}</div>
   </div>
-  <p class="muted" style="font-size:.85rem">الطلب الواحد قد يشمل أكثر من منصة أو إجراء، لذا قد يزيد مجموع الأعمدة عن عدد الطلبات.</p>
+  <p class="muted small" style="margin-top:10px">الطلب الواحد قد يشمل أكثر من منصة أو إجراء، لذا قد يزيد مجموع الأعمدة عن عدد الطلبات.</p>
 </div>
 
 <div class="card">
-  <h2>تفاصيل الطلبات ({{ result.total }})</h2>
-  <div style="overflow-x:auto">
+  <div class="card-head"><h2>تفاصيل الطلبات ({{ result.total }})</h2></div>
+  <div class="table-wrap">
   <table>
-    <thead><tr><th>#</th><th>التاريخ</th><th>المنصات</th><th>الإجراء</th><th>الروابط</th><th>مسؤول الرصد</th><th>الحالة</th><th>المعتمد</th></tr></thead>
+    <thead><tr><th>#</th><th>التاريخ</th><th>المنصات</th><th>الإجراء</th><th class="num">الروابط</th><th>مسؤول الرصد</th><th>الحالة</th><th>المعتمد</th></tr></thead>
     <tbody>
     {% for r in result.requests %}
     <tr>
-      <td>{% if pdf %}{{ r.pk }}{% else %}<a href="{{ r.get_absolute_url }}">{{ r.pk }}</a>{% endif %}</td>
+      <td>{% if pdf %}{{ r.pk }}{% else %}<a class="row-link" href="{{ r.get_absolute_url }}">{{ r.pk }}</a>{% endif %}</td>
       <td style="white-space:nowrap">{{ r.created_at|date:"Y/m/d H:i" }}</td>
-      <td>{{ r.platform_labels|join:"، " }}</td>
-      <td>{{ r.action_labels|join:"، " }}</td>
-      <td>{{ r.link_count }}</td>
-      <td class="ltr">{{ r.monitor.username }}</td>
+      <td>{% platforms r.platforms 14 %}</td>
+      <td>{% actions r.actions 14 %}</td>
+      <td class="num">{{ r.link_count }}</td>
+      <td class="ltr mono">{{ r.monitor.username }}</td>
       <td><span class="badge b-{{ r.status }}">{{ r.get_status_display }}</span></td>
-      <td>{% if r.approved_by %}<span class="ltr">{{ r.approved_by.username }}</span> <span class="muted">{{ r.approved_at|date:"Y/m/d" }}</span>{% else %}—{% endif %}</td>
+      <td>{% if r.approved_by %}<span class="ltr mono">{{ r.approved_by.username }}</span> <span class="muted small">{{ r.approved_at|date:"Y/m/d" }}</span>{% else %}—{% endif %}</td>
     </tr>
-    {% empty %}<tr><td colspan="8" class="muted">لا توجد طلبات تطابق المعايير المختارة.</td></tr>{% endfor %}
+    {% empty %}<tr><td colspan="8" class="empty">لا توجد طلبات تطابق المعايير المختارة.</td></tr>{% endfor %}
     </tbody>
   </table>
   </div>

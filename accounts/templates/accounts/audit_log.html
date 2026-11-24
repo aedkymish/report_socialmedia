@@ -1,23 +1,28 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}سجل التدقيق{% endblock %}
 {% block content %}
+<div class="page-head">
+  <div>
+    <h1>سجل التدقيق</h1>
+    <div class="sub">كل عملية إنشاء أو تعديل أو حذف على المستخدمين والطلبات والروابط، مع المنفّذ ووقت التنفيذ.</div>
+  </div>
+</div>
 <div class="card">
-  <h1>سجل التدقيق</h1>
-  <p class="muted">كل عملية إنشاء أو تعديل أو حذف على المستخدمين والطلبات والروابط، مع المنفّذ ووقت التنفيذ.</p>
-  <form method="get" class="filters">
-    <select name="model" style="width:auto">
+  <form method="get" class="toolbar">
+    <select name="model" aria-label="نوع السجل">
       <option value="">كل السجلات</option>
       {% for pk, name in content_types %}<option value="{{ pk }}" {% if request.GET.model == pk|stringformat:"d" %}selected{% endif %}>{{ name }}</option>{% endfor %}
     </select>
-    <select name="action" style="width:auto">
+    <select name="action" aria-label="العملية">
       <option value="">كل العمليات</option>
       {% for v, l in actions %}<option value="{{ v }}" {% if request.GET.action == v|stringformat:"d" %}selected{% endif %}>{{ l }}</option>{% endfor %}
     </select>
-    <input type="text" name="actor" value="{{ request.GET.actor }}" placeholder="كود المنفّذ" dir="ltr" style="width:130px">
-    <input type="text" name="object" value="{{ request.GET.object }}" placeholder="بحث في السجل" style="width:160px">
-    <label class="muted">من <input type="date" name="from" value="{{ request.GET.from }}"></label>
-    <label class="muted">إلى <input type="date" name="to" value="{{ request.GET.to }}"></label>
-    <button class="btn secondary">تصفية</button>
+    <input type="text" name="actor" value="{{ request.GET.actor }}" placeholder="كود المنفّذ" dir="ltr" style="width:130px" aria-label="كود المنفّذ">
+    <input type="search" name="object" value="{{ request.GET.object }}" placeholder="بحث في السجل" class="grow" aria-label="بحث">
+    <label>من <input type="date" name="from" value="{{ request.GET.from }}"></label>
+    <label>إلى <input type="date" name="to" value="{{ request.GET.to }}"></label>
+    <button class="btn secondary">{% icon "search" 16 %}تصفية</button>
   </form>
   {% include "accounts/_audit_table.html" with entries=object_list %}
   {% include "_pagination.html" %}

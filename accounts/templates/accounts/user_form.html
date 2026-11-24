@@ -1,26 +1,36 @@
 {% extends "base.html" %}
 {% block title %}{% if object %}تعديل {{ object.username }}{% else %}مستخدم جديد{% endif %}{% endblock %}
+{% block page_class %}page-narrow{% endblock %}
 {% block content %}
-<div class="card" style="max-width:640px">
-  <h1>{% if object %}تعديل المستخدم <span class="ltr">{{ object.username }}</span>{% else %}مستخدم جديد{% endif %}</h1>
-  <p class="muted">الكود هو اسم المستخدم الذي يُدخل في النموذج وفي تسجيل الدخول.</p>
+<div class="page-head">
+  <div>
+    <h1>{% if object %}تعديل المستخدم <span class="ltr">{{ object.username }}</span>{% else %}مستخدم جديد{% endif %}</h1>
+    <div class="sub">الكود هو اسم المستخدم الذي يُدخل في النموذج وفي تسجيل الدخول.</div>
+  </div>
+</div>
+<div class="card">
   <form method="post" novalidate>{% csrf_token %}
     {{ form.non_field_errors }}
+    <div class="grid2">
+    {% for f in form %}
+      {% if f.field.widget.input_type != "checkbox" %}<div>{% include "reports/_field.html" with f=f %}</div>{% endif %}
+    {% endfor %}
+    </div>
     {% for f in form %}
       {% if f.field.widget.input_type == "checkbox" %}
-        <div class="field"><label style="font-weight:400">{{ f }} {{ f.label }}</label>
-          {% if f.help_text %}<div class="muted">{{ f.help_text }}</div>{% endif %}{{ f.errors }}</div>
-      {% else %}
-        {% include "reports/_field.html" with f=f %}
+        <label class="check-line">{{ f }}<span>{{ f.label }}{% if f.help_text %}<span class="help" style="display:block">{{ f.help_text }}</span>{% endif %}</span></label>
+        {{ f.errors }}
       {% endif %}
     {% endfor %}
-    <button class="btn">حفظ</button>
-    <a class="btn secondary" href="{% url 'accounts:list' %}">إلغاء</a>
+    <div class="btn-row" style="justify-content:flex-end;margin-top:12px">
+      <a class="btn secondary" href="{% url 'accounts:list' %}">إلغاء</a>
+      <button class="btn">حفظ</button>
+    </div>
   </form>
 </div>
 {% if history %}
 <div class="card">
-  <h2>سجل التغييرات على هذا المستخدم</h2>
+  <div class="card-head"><h2>سجل التغييرات على هذا المستخدم</h2></div>
   {% include "accounts/_audit_table.html" with entries=history hide_object=True %}
 </div>
 {% endif %}

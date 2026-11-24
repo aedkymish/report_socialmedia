@@ -5,35 +5,44 @@
 <title>تقرير طلبات الإجراء</title>
 <style>
   {{ font_css|safe }}
-  :root { --ink:#1d2733; --muted:#5b6670; --line:#d9dee4; --brand:#0f4c5c; --ok:#1e7d4f; --warn:#8a5300; --bad:#b3261e; }
-  @page { size: A4; margin: 14mm 12mm 16mm; }
-  * { box-sizing:border-box; }
-  body { margin:0; font-family:"ReportSans", sans-serif; color:var(--ink); font-size:11pt; line-height:1.6;
-         -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-  h1 { font-size:16pt; margin:0 0 4px; } h2 { font-size:12pt; margin:0 0 8px; color:var(--brand); }
-  .muted { color:var(--muted); }
-  .ltr { direction:ltr; unicode-bidi:embed; }
-  .card { margin-bottom:14px; }
-  .form-head { text-align:center; border-bottom:2px solid var(--brand); padding-bottom:8px; margin-bottom:12px; }
-  /* printed output: logo centred on its own line above the title (no overlap) */
+  /* same design system as the screen */
+  {{ app_css|safe }}
+  /* PDF-specific overrides */
+  :root { --font:"ReportSans", sans-serif; }
+  @page { size:A4; margin:14mm 12mm 16mm; }
+  body { background:#fff; font-size:10.5pt; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .card { border:0; box-shadow:none; padding:0; margin:0 0 12px; }
   .form-head.with-logo { display:block; }
   .form-head .head-logo { display:flex; justify-content:center; margin:0 auto 3mm; }
-  .form-head .head-logo img { max-width:60mm; width:auto; object-fit:contain; display:block; }
+  .form-head .head-logo img { max-width:60mm; }
   .form-head .head-spacer { display:none; }
-  table { width:100%; border-collapse:collapse; font-size:9.5pt; }
-  th, td { padding:5px 6px; border-bottom:1px solid var(--line); text-align:start; vertical-align:top; }
-  th { background:#eef2f5; font-weight:700; }
-  .badge { display:inline-block; padding:0 7px; border-radius:9px; font-size:8.5pt; background:#e6ebef; white-space:nowrap; }
-  .b-approved { background:#dcefe4; color:var(--ok); } .b-rejected { background:#f7dedc; color:var(--bad); }
-  .b-submitted { background:#fbeccf; color:var(--warn); }
-  .tile { background:#fff; }
-  .tiles { grid-template-columns:repeat(5,1fr) !important; gap:8px !important; }
-  .tile { padding:8px 10px !important; }
-  .tile .num { font-size:17pt !important; }
-  .tile .lbl { font-size:8.5pt !important; }
-  .charts { grid-template-columns:1fr 1fr !important; }
+  .tiles { grid-template-columns:repeat(5,1fr); gap:8px; }
+  .tile { padding:8px 10px; }
+  .tile .num { font-size:17pt; }
+  .tile .lbl { font-size:8.5pt; }
+  .charts { grid-template-columns:1fr 1fr; gap:10px; }
+  .chart { break-inside:avoid; }
+  table { font-size:9pt; }
+  th, td { padding:6px 7px; }
+  thead { display:table-header-group; }
+  tr { break-inside:avoid; }
+  .table-wrap { overflow:visible; }
+  table { table-layout:fixed; }
+  td { overflow-wrap:anywhere; }
+  th:nth-child(1), td:nth-child(1) { width:5%; }
+  th:nth-child(2), td:nth-child(2) { width:14%; white-space:normal !important; }
+  th:nth-child(5), td:nth-child(5) { width:8%; }
+  th:nth-child(6), td:nth-child(6) { width:10%; }
+  th:nth-child(7), td:nth-child(7) { width:14%; }
+  th:nth-child(8), td:nth-child(8) { width:11%; }
+  th { white-space:normal; }
+  .tags { gap:3px; }
+  .tag { padding:0 6px; font-size:7.5pt; white-space:normal; }
+  .tag .icon { width:11px; height:11px; }
+  .badge { white-space:normal; border-radius:6px; line-height:1.4; padding:2px 6px; }
+  .badge { font-size:8pt; }
+  .badge::before { display:none; }
 </style>
-{% include "reports/_report_styles.html" %}
 </head>
 <body>
 {% with f=result.filter %}

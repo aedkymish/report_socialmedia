@@ -132,7 +132,7 @@ class RequestLink(models.Model):
         PARTIAL = "partial", "اكتمل جزئياً"
         FAILED = "failed", "فشل"
 
-    request = models.ForeignKey(ActionRequest, on_delete=models.CASCADE, related_name="links")
+    request = models.ForeignKey(ActionRequest, on_delete=models.CASCADE, related_name="links", verbose_name="الطلب")
     url = models.URLField("الرابط", max_length=1000)
     platform = models.CharField("المنصة", max_length=16, choices=Platform.choices, default=Platform.OTHER)
 

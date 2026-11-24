@@ -30,6 +30,17 @@ OVERLAP_JS = """() => {
 }"""
 
 
+APP_CSS = (Path(settings.BASE_DIR) / "static" / "css" / "app.css").read_text(encoding="utf-8")
+
+
+def with_css(html: str) -> str:
+    """Inline the real stylesheet: set_content() has no server to fetch /static/ from."""
+    import re
+    out, n = re.subn(r'<link rel="stylesheet" href="[^"]*app\.css">', f"<style>{APP_CSS}</style>", html)
+    assert n == 1, "stylesheet link not found"
+    return out
+
+
 def png(w, h) -> bytes:
     buf = io.BytesIO()
     Image.new("RGB", (w, h), "navy").save(buf, format="PNG")
@@ -73,7 +84,7 @@ class LogoLayoutTests(TestCase):
             data_uri = "data:image/png;base64," + base64.b64encode(png(w, h)).decode()
             with self._settings(logo):
                 html = self.client.get(self.req.get_absolute_url()).content.decode()
-            pages[(w, h)] = html.replace(reverse("reports:logo"), data_uri)
+            pages[(w, h)] = with_css(html.replace(reverse("reports:logo"), data_uri))
 
         with BrowserLauncher().context({"width": 794, "height": 1123}) as ctx:  # A4 @96dpi
             page = ctx.new_page()
@@ -93,7 +104,7 @@ class LogoLayoutTests(TestCase):
         data_uri = "data:image/png;base64," + base64.b64encode(png(600, 200)).decode()
         with self._settings(logo):
             html = self.client.get(self.req.get_absolute_url()).content.decode()
-        html = html.replace(reverse("reports:logo"), data_uri)
+        html = with_css(html.replace(reverse("reports:logo"), data_uri))
         with BrowserLauncher().context({"width": 794, "height": 1123}) as ctx:
             page = ctx.new_page()
             page.emulate_media(media="print")
@@ -101,3 +112,21 @@ class LogoLayoutTests(TestCase):
             res = page.evaluate(CENTRE_JS)
         self.assertLess(res["offset"], 2, res)
         self.assertTrue(res["above"], res)
+
+    def test_screen_layout_puts_logo_beside_title(self):
+        logo = self.dir / "logo.png"
+        logo.write_bytes(png(300, 300))
+        data_uri = "data:image/png;base64," + base64.b64encode(png(300, 300)).decode()
+        with self._settings(logo):
+            html = self.client.get(self.req.get_absolute_url()).content.decode()
+        html = with_css(html.replace(reverse("reports:logo"), data_uri))
+        with BrowserLauncher().context({"width": 1100, "height": 900}) as ctx:
+            page = ctx.new_page()
+            page.set_content(html, wait_until="load")
+            res = page.evaluate("""() => {
+              const img = document.querySelector('.form-head .head-logo img').getBoundingClientRect();
+              const text = document.querySelector('.form-head .head-text').getBoundingClientRect();
+              return {imgLeft: img.left, textRight: text.right, sameRow: img.top < text.bottom && text.top < img.bottom};
+            }""")
+        self.assertTrue(res["sameRow"], res)
+        self.assertGreater(res["imgLeft"], res["textRight"], res)  # RTL: logo on the right of the text

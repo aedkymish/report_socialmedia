@@ -1,49 +1,81 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}طلب إجراء جديد{% endblock %}
+{% block page_class %}page-narrow{% endblock %}
 {% block content %}
 <form method="post" novalidate>{% csrf_token %}
 <div class="card">
   <div class="form-head">
-    <div class="muted">إدارة الشؤون الفنية — فريق الرصد والمتابعة الإلكترونية</div>
+    <div class="org">إدارة الشؤون الفنية — فريق الرصد والمتابعة الإلكترونية</div>
     <h1>نموذج طلب إجراء (حجب - قفل - حظر - توثيق) للصفحات والقنوات الرسمية</h1>
   </div>
+  {% if form.errors %}<ul class="messages"><li class="error">يرجى تصحيح الحقول المشار إليها أدناه.</li></ul>{% endif %}
   {{ form.non_field_errors }}
 
-  <h2>{{ form.platforms.label }} <span class="muted">(ضع علامة صح أمام المنصة المطلوبة)</span></h2>
-  <div class="field">{{ form.platforms }}{{ form.platforms.errors }}</div>
-
-  <h2>{{ form.actions.label }} <span class="muted">(ضع علامة صح أمام الإجراء المراد)</span></h2>
-  <div class="field">{{ form.actions }}{{ form.actions.errors }}</div>
-
-  <h2>{{ form.links.label }}</h2>
-  <div class="field">{{ form.links }}<div class="muted">{{ form.links.help_text }}</div>{{ form.links.errors }}</div>
-
-  <h2>{{ form.description.label }}</h2>
-  <div class="field">{{ form.description }}{{ form.description.errors }}</div>
-
-  <h2>خامساً: المخولون بالعمليات</h2>
-  <div class="grid3">
-    <div>{% include "reports/_field.html" with f=form.monitor %}<div class="muted">مسؤول عن الرصد والمتابعة الإلكترونية</div></div>
-    <div>{% include "reports/_field.html" with f=form.uploader %}<div class="muted">مسؤول عن رفع الأدلة والبيانات</div></div>
-    <div>
-      <div class="field">
-        <label for="platform-contact-code">3. مسؤول المنصة (نقطة الاتصال) - الكود</label>
-        <input type="text" id="platform-contact-code" value="{{ platform_contact_code }}" dir="ltr" readonly
-               style="background:#eef2f5;cursor:not-allowed" aria-readonly="true">
-      </div>
-      <div class="muted">الكود الثابت لنقطة الاتصال الخارجية</div>
+  <section class="section">
+    <h2 class="section-title"><span class="num">أولاً</span>المنصات المستهدفة <span class="hint">اختر منصة أو أكثر</span></h2>
+    <div class="choices">
+      {% for cb in form.platforms %}
+      <label class="choice">{{ cb.tag }}{% platform_icon cb.data.value 20 %}<span>{{ cb.choice_label }}</span></label>
+      {% endfor %}
     </div>
+    {{ form.platforms.errors }}
+  </section>
+
+  <section class="section">
+    <h2 class="section-title"><span class="num">ثانياً</span>نوع الإجراء المطلوب <span class="hint">اختر إجراءً أو أكثر</span></h2>
+    <div class="choices short">
+      {% for cb in form.actions %}
+      <label class="choice">{{ cb.tag }}{% action_icon cb.data.value 20 %}<span>{{ cb.choice_label }}</span></label>
+      {% endfor %}
+    </div>
+    {{ form.actions.errors }}
+  </section>
+
+  <section class="section">
+    <h2 class="section-title"><span class="num">ثالثاً</span>رابط الصفحة أو القناة المراد العمل عليها</h2>
+    {{ form.links }}
+    <div class="help">{{ form.links.help_text }}</div>
+    {{ form.links.errors }}
+  </section>
+
+  <section class="section">
+    <h2 class="section-title"><span class="num">رابعاً</span><label for="{{ form.description.id_for_label }}" style="margin:0">شرح مبسط عن الحالة / سبب الطلب</label></h2>
+    {{ form.description }}
+    {{ form.description.errors }}
+  </section>
+
+  <section class="section">
+    <h2 class="section-title"><span class="num">خامساً</span>المخولون بالعمليات</h2>
+    <div class="grid3">
+      <div>{% include "reports/_field.html" with f=form.monitor %}<div class="help">مسؤول عن الرصد والمتابعة الإلكترونية</div></div>
+      <div>{% include "reports/_field.html" with f=form.uploader %}<div class="help">مسؤول عن رفع الأدلة والبيانات</div></div>
+      <div>
+        <div class="field">
+          <label for="platform-contact-code">3. مسؤول المنصة (نقطة الاتصال) - الكود</label>
+          <input type="text" id="platform-contact-code" value="{{ platform_contact_code }}" dir="ltr" readonly aria-readonly="true">
+        </div>
+        <div class="help">الكود الثابت لنقطة الاتصال الخارجية</div>
+      </div>
+    </div>
+    <datalist id="user-codes">
+      {% for u in users %}<option value="{{ u.username }}">{{ u.full_name }} — {{ u.get_role_display }}</option>{% endfor %}
+    </datalist>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title"><span class="num">سادساً</span>التوقيع والاعتماد الرسمي</h2>
+    <label class="check-line">{{ form.declaration_accepted }}<span>{{ form.declaration_accepted.label }}</span></label>
+    {{ form.declaration_accepted.errors }}
+    <label class="check-line">{{ form.consent_accepted }}<span>{{ form.consent_accepted.label }}</span></label>
+    {{ form.consent_accepted.errors }}
+    <p class="help">يُعتمد الطلب لاحقاً من المسؤول المعتمد (مكتب الأدلة الرقمية)، ويُسجَّل التوقيع والتاريخ تلقائياً.</p>
+  </section>
+
+  <div class="btn-row" style="justify-content:flex-end;border-top:1px solid var(--line);padding-top:16px">
+    <a class="btn secondary" href="{% url 'reports:list' %}">إلغاء</a>
+    <button class="btn lg">{% icon "check" 18 %}إرسال الطلب</button>
   </div>
-  <datalist id="user-codes">
-    {% for u in users %}<option value="{{ u.username }}">{{ u.full_name }} — {{ u.get_role_display }}</option>{% endfor %}
-  </datalist>
-
-  <h2 style="margin-top:14px">سادساً: التوقيع والاعتماد الرسمي</h2>
-  <div class="field"><label style="font-weight:400">{{ form.declaration_accepted }} {{ form.declaration_accepted.label }}</label>{{ form.declaration_accepted.errors }}</div>
-  <div class="field"><label style="font-weight:400">{{ form.consent_accepted }} {{ form.consent_accepted.label }}</label>{{ form.consent_accepted.errors }}</div>
-  <p class="muted">يُعتمد الطلب لاحقاً من المسؤول المعتمد (مكتب الأدلة الرقمية)، ويُسجَّل التوقيع والتاريخ تلقائياً.</p>
-
-  <button class="btn">إرسال الطلب</button>
 </div>
 </form>
 {% endblock %}

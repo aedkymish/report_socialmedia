@@ -36,6 +36,16 @@ def embedded_font_css(family: str = "ReportSans") -> str:
     return "\n".join(rules)
 
 
+@lru_cache(maxsize=1)
+def app_css() -> str:
+    """The UI stylesheet, inlined into the PDF so it matches the screen.
+    Its @font-face rules are dropped: the PDF embeds its own fonts."""
+    import re
+
+    css = (Path(__file__).resolve().parent.parent.parent / "static" / "css" / "app.css").read_text(encoding="utf-8")
+    return re.sub(r"@font-face\s*\{[^}]*\}", "", css)
+
+
 class PdfRenderer:
     FOOTER = (
         '<div style="width:100%;font-size:8px;color:#666;padding:0 12mm;display:flex;'
