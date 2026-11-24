@@ -1,4 +1,4 @@
-{% load ui %}<div class="links-widget" data-name="{{ widget.name }}">
+{% load ui %}<div class="links-widget" data-name="{{ widget.name }}" data-check-url="{% url 'reports:link_check' %}">
   <div class="links-rows">
     {% for v in widget.rows %}
     <div class="link-row">
@@ -6,6 +6,7 @@
       <input type="url" name="{{ widget.name }}" value="{{ v }}" dir="ltr" placeholder="https://..." autocomplete="off" aria-label="رابط">
       <span class="link-platform"></span>
       <button type="button" class="link-remove" title="حذف الرابط" aria-label="حذف الرابط">{% icon "x" 16 %}</button>
+      <div class="link-dup" role="alert" hidden></div>
     </div>
     {% endfor %}
   </div>
@@ -31,6 +32,26 @@
           return ICONS.other + '<span>أخرى</span>';
     } catch (e) { return '<span style="color:var(--bad)">⚠ غير صالح</span>'; }
   }
+  const checkUrl = root.dataset.checkUrl;
+  const cache = new Map();
+  async function checkDuplicate(row) {
+    const input = row.querySelector('input'), box = row.querySelector('.link-dup');
+    const v = input.value.trim();
+    box.hidden = true; box.innerHTML = ''; row.classList.remove('is-dup');
+    if (!v) return;
+    const inputs = [...rows.querySelectorAll('.link-row input')];
+    const earlier = inputs.slice(0, inputs.indexOf(input)).some(i => i.value.trim().toLowerCase() === v.toLowerCase());
+    if (earlier) { box.textContent = 'هذا الرابط مكرر في هذا الطلب وسيُتجاهل.'; box.hidden = false; row.classList.add('is-dup'); return; }
+    try {
+      if (!cache.has(v)) cache.set(v, fetch(checkUrl + '?url=' + encodeURIComponent(v), {credentials: 'same-origin'}).then(r => r.json()));
+      const res = await cache.get(v);
+      if (input.value.trim() !== v || !res.duplicate) return;
+      box.innerHTML = 'الرابط مسجّل مسبقاً في <a target="_blank" href="' + res.href + '">الطلب رقم ' + res.request + '</a> (' + res.status + ') — لن يُقبل الطلب به.';
+      box.hidden = false; row.classList.add('is-dup');
+    } catch (e) { /* offline: the server still validates on submit */ }
+  }
+  const checkAll = () => rows.querySelectorAll('.link-row').forEach(checkDuplicate);
+  rows.addEventListener('change', e => { const r = e.target.closest('.link-row'); if (r) checkAll(); });
   function refresh() {
     const all = [...rows.querySelectorAll('.link-row')];
     let filled = 0;
@@ -54,7 +75,7 @@
     const row = btn.closest('.link-row');
     if (rows.querySelectorAll('.link-row').length > 1) row.remove();
     else row.querySelector('input').value = '';
-    refresh();
+    refresh(); checkAll();
   });
   rows.addEventListener('input', refresh);
   rows.addEventListener('keydown', e => {           // Enter = new row instead of submitting
@@ -71,8 +92,8 @@
     const input = row.querySelector('input');
     if (!input.value.trim()) { input.value = urls.shift(); }
     for (const u of urls) row = addRow(u, row).closest('.link-row');
-    refresh();
+    refresh(); checkAll();
   });
-  refresh();
+  refresh(); checkAll();
 })();
 </script>

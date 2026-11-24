@@ -248,7 +248,10 @@ pre.log { white-space:pre-wrap; background:var(--surface-2); border:1px solid va
 
 /* ---------- Links widget ---------- */
 .links-widget { border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px; background:var(--surface-2); }
-.link-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.link-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+.link-row.is-dup input { border-color:var(--bad); background:var(--bad-bg); }
+.link-dup { flex-basis:100%; margin-inline-start:34px; color:var(--bad); font-size:.84rem; font-weight:600; }
+.link-dup a { color:var(--bad); font-weight:700; }
 .link-row input { flex:1; min-width:0; background:var(--surface); }
 .link-num { width:26px; height:26px; display:grid; place-items:center; color:var(--muted); font-size:.8rem; border-radius:6px; background:var(--surface-3); flex:none; }
 .link-platform { min-width:96px; font-size:.8rem; color:var(--ink-2); white-space:nowrap; display:inline-flex; align-items:center; gap:6px; }

@@ -16,6 +16,7 @@ from django.views.generic import TemplateView
 
 from .forms import ActionRequestForm, AuthorizedPersonsForm, DecisionForm
 from .services.pdf import PdfRenderer, app_css, embedded_font_css, report_logo_data_uri, resolve_report_logo
+from .services.url_normalizer import normalize_url
 from .reporting import FORM_PLATFORMS, ReportBuilder, ReportCsvExporter, ReportFilter
 from .models import ActionRequest, ActionType, RequestLink
 from .services import EvidenceDispatcher, LinkAnalyzer
@@ -68,8 +69,9 @@ class RequestCreateView(LoginRequiredMixin, CreateView):
         with transaction.atomic():
             form.instance.created_by = self.request.user
             self.object = form.save()
-            RequestLink.objects.bulk_create(
-                RequestLink(request=self.object, url=url, platform=analyzer.analyze(url).platform)
+            RequestLink.objects.bulk_create(  # bulk_create skips save(): set normalized_url here
+                RequestLink(request=self.object, url=url, platform=analyzer.analyze(url).platform,
+                            normalized_url=normalize_url(url))
                 for url in form.cleaned_data["links"]
             )
             obj = self.object
@@ -272,3 +274,26 @@ class BrandingLogoView(LoginRequiredMixin, View):
         response = FileResponse(open(path, "rb"), content_type=mime)
         response["Cache-Control"] = "private, max-age=300"
         return response
+
+
+class LinkCheckView(LoginRequiredMixin, View):
+    """GET ?url=… → is this link already used in a request? (live warning in the form)"""
+
+    def get(self, request):
+        from django.http import JsonResponse
+
+        from .forms import find_existing_links
+
+        url = request.GET.get("url", "").strip()[:1000]
+        if not url:
+            return JsonResponse({"duplicate": False})
+        found = find_existing_links([url])
+        if not found:
+            return JsonResponse({"duplicate": False})
+        link = found[0][1]
+        return JsonResponse({
+            "duplicate": True,
+            "request": link.request_id,
+            "status": link.request.get_status_display(),
+            "href": link.request.get_absolute_url(),
+        })

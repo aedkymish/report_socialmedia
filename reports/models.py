@@ -153,6 +153,8 @@ class RequestLink(models.Model):
 
     request = models.ForeignKey(ActionRequest, on_delete=models.CASCADE, related_name="links", verbose_name="الطلب")
     url = models.URLField("الرابط", max_length=1000)
+    # Canonical form (see services/url_normalizer.py) used to prevent duplicate links.
+    normalized_url = models.CharField("الرابط الموحّد", max_length=1000, blank=True, editable=False, db_index=True)
     platform = models.CharField("المنصة", max_length=16, choices=Platform.choices, default=Platform.OTHER)
 
     is_video = models.BooleanField("فيديو؟", default=False)
@@ -181,6 +183,14 @@ class RequestLink(models.Model):
 
     def __str__(self) -> str:
         return self.url
+
+    def save(self, *args, **kwargs):
+        from .services.url_normalizer import normalize_url
+
+        self.normalized_url = normalize_url(self.url)
+        if kwargs.get("update_fields") is not None and "url" in kwargs["update_fields"]:
+            kwargs["update_fields"] = {*kwargs["update_fields"], "normalized_url"}
+        super().save(*args, **kwargs)
 
 
 from auditlog.registry import auditlog  # noqa: E402

@@ -3,7 +3,22 @@ from django.contrib.auth import get_user_model
 from django.core.validators import URLValidator
 
 from .models import ActionRequest, ActionType, Platform
+from .services.url_normalizer import normalize_url
 from .widgets import LinksWidget
+
+
+def find_existing_links(urls, exclude_request=None):
+    """[(submitted url, existing RequestLink)] for links already used in another request."""
+    from .models import RequestLink
+
+    keys = {normalize_url(u): u for u in urls}
+    qs = RequestLink.objects.filter(normalized_url__in=keys).select_related("request").order_by("request_id")
+    if exclude_request is not None:
+        qs = qs.exclude(request=exclude_request)
+    found = {}
+    for link in qs:
+        found.setdefault(link.normalized_url, link)
+    return [(keys[k], link) for k, link in found.items()]
 
 User = get_user_model()
 
@@ -63,11 +78,11 @@ class ActionRequestForm(forms.ModelForm):
 
     def clean_links(self) -> list[str]:
         validator = URLValidator(schemes=["http", "https"])
-        urls, seen = [], set()
+        urls, seen = [], set()  # seen = normalized forms: same link in another spelling is a repeat
         raw = self.cleaned_data["links"].replace(",", "\n").replace("،", "\n")
         for line in raw.split():
             url = line.strip()
-            if not url or url in seen:
+            if not url:
                 continue
             if not url.startswith(("http://", "https://")):
                 url = "https://" + url
@@ -75,12 +90,21 @@ class ActionRequestForm(forms.ModelForm):
                 validator(url)
             except forms.ValidationError:
                 raise forms.ValidationError(f"رابط غير صالح: {line.strip()}")
-            seen.add(url)
+            key = normalize_url(url)
+            if key in seen:
+                continue
+            seen.add(key)
             urls.append(url)
         if not urls:
             raise forms.ValidationError("أدخل رابطاً واحداً على الأقل.")
         if len(urls) > self.MAX_LINKS:
             raise forms.ValidationError(f"الحد الأقصى {self.MAX_LINKS} رابطاً في الطلب الواحد.")
+        existing = find_existing_links(urls)
+        if existing:
+            raise forms.ValidationError([
+                f"الرابط مسجّل مسبقاً في الطلب رقم {link.request_id} ({link.request.get_status_display()}): {url}"
+                for url, link in existing
+            ])
         return urls
 
 
