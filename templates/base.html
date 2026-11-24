@@ -56,6 +56,12 @@
   .form-head .head-logo { justify-self:start; display:flex; align-items:center; }
   .form-head .head-logo img { max-width:100%; width:auto; object-fit:contain; display:block; }
   .form-head .head-text { min-width:0; }
+  @media print {
+    .form-head.with-logo { display:block; }
+    .form-head .head-logo { display:flex; justify-content:center; margin:0 auto 8px; }
+    .form-head .head-logo img { max-width:60mm; }
+    .form-head .head-spacer { display:none; }
+  }
   @media (max-width:560px) {
     .form-head.with-logo { grid-template-columns:1fr; row-gap:8px; }
     .form-head .head-logo { justify-self:center; }

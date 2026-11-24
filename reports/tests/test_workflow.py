@@ -304,5 +304,7 @@ class SignatureLineTests(TestCase):
         self.assertIn('التوقيع الرسمي: <span class="signature-line">..............................</span><br>', before)
         req.approve(boss)
         after = self.client.get(req.get_absolute_url()).content.decode()
-        self.assertIn('<span class="signature-line">..............................</span>&nbsp;&nbsp;<b class="ltr">001</b><br>', after)
+        # code shown on screen only; the printout keeps just the dotted line
+        self.assertIn('<span class="signature-line">..............................</span>'
+                      '<span class="no-print">&nbsp;&nbsp;<b class="ltr">001</b></span><br>', after)
         self.assertNotIn("(001)", after)

@@ -14,6 +14,14 @@ from accounts.models import User
 from reports.models import ActionRequest
 from reports.services.browser import BrowserLauncher
 
+CENTRE_JS = """() => {
+  const img = document.querySelector('.form-head .head-logo img').getBoundingClientRect();
+  const head = document.querySelector('.form-head').getBoundingClientRect();
+  const text = document.querySelector('.form-head .head-text').getBoundingClientRect();
+  return {offset: Math.abs((img.left + img.width / 2) - (head.left + head.width / 2)),
+          above: img.bottom <= text.top + 0.5};
+}"""
+
 OVERLAP_JS = """() => {
   const img = document.querySelector('.form-head .head-logo img').getBoundingClientRect();
   const text = document.querySelector('.form-head .head-text').getBoundingClientRect();
@@ -78,3 +86,18 @@ class LogoLayoutTests(TestCase):
                     self.assertFalse(res["overlap"], f"logo {w}x{h} overlaps text at {width}px {media}: {res}")
                     self.assertLessEqual(res["imgH"], 70.5)
                     self.assertGreater(res["imgW"], 0)
+
+    def test_logo_centred_above_title_when_printing(self):
+        logo = self.dir / "logo.png"
+        logo.write_bytes(png(600, 200))
+        data_uri = "data:image/png;base64," + base64.b64encode(png(600, 200)).decode()
+        with self._settings(logo):
+            html = self.client.get(self.req.get_absolute_url()).content.decode()
+        html = html.replace(reverse("reports:logo"), data_uri)
+        with BrowserLauncher().context({"width": 794, "height": 1123}) as ctx:
+            page = ctx.new_page()
+            page.emulate_media(media="print")
+            page.set_content(html, wait_until="load")
+            res = page.evaluate(CENTRE_JS)
+        self.assertLess(res["offset"], 2, res)
+        self.assertTrue(res["above"], res)
